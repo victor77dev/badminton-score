@@ -3,10 +3,11 @@
   "compilerOptions": {
     "strict": true,
     "paths": {
-      "@/*": [
-        "./src/*",
-        "./*"
-      ]
+      "#/components/*": ["./src/components/*"],
+      "#/hooks/*": ["./src/hooks/*"],
+      "#/constants/*": ["./src/constants/*"],
+      "#/assets/*": ["./src/assets/*"],
+      "#/*": ["./src/*"]
     }
   },
   "include": [
