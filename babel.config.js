@@ -8,9 +8,14 @@ module.exports = function (api) {
         {
           extensions: ['.js', '.jsx', '.ts', '.tsx'],
           alias: {
-            '^#/assets/(.+)': './assets/\\1',
-            '^#/(.+)': './src/\\1',
-            '#': './src',
+            '#/components': './src/components',
+            '#/components/*': './src/components/*',
+            '#/hooks': './src/hooks',
+            '#/hooks/*': './src/hooks/*',
+            '#/constants': './src/constants',
+            '#/constants/*': './src/constants/*',
+            '#/assets': './assets',
+            '#/assets/*': './assets/*',
           },
         },
       ],
