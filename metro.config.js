@@ -12,7 +12,7 @@ config.resolver.alias = {
   '#/components': resolvePath('src/components'),
   '#/constants': resolvePath('src/constants'),
   '#/hooks': resolvePath('src/hooks'),
-  '#/assets': resolvePath('assets'),
+  '#/assets': resolvePath('src/assets'),
 };
 
 module.exports = config;

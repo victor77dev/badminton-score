@@ -14,7 +14,7 @@ module.exports = async function (env, argv) {
     '#/components': resolvePath('src/components'),
     '#/constants': resolvePath('src/constants'),
     '#/hooks': resolvePath('src/hooks'),
-    '#/assets': resolvePath('assets'),
+    '#/assets': resolvePath('src/assets'),
   };
 
   return config;
