@@ -7,9 +7,10 @@ module.exports = function (api) {
         'module-resolver',
         {
           extensions: ['.js', '.jsx', '.ts', '.tsx'],
-          root: ['./'],
           alias: {
-            '#': './',
+            '^#/assets/(.+)': './assets/\\1',
+            '^#/(.+)': './src/\\1',
+            '#': './src',
           },
         },
       ],
