@@ -1,4 +1,4 @@
-import { createSlice } from '@reduxjs/toolkit';
+import { createSelector, createSlice } from '@reduxjs/toolkit';
 import type { PayloadAction } from '@reduxjs/toolkit';
 
 import type { MatchType, TeamId } from '#/types/match';
@@ -136,5 +136,16 @@ const matchSlice = createSlice({
 export const { startMatch, addPoint, undoLastPoint } = matchSlice.actions;
 
 export const selectMatch = (state: RootState) => state.match;
+
+export const selectIsMatchInProgress = createSelector(
+  selectMatch,
+  (match) => match.status === 'in-progress',
+);
+
+export const selectCanUndo = createSelector(selectMatch, (match) => match.history.length > 0);
+
+export const selectOrderedTeams = createSelector(selectMatch, (match) =>
+  (['sideA', 'sideB'] as TeamId[]).map((id) => match.teams[id]),
+);
 
 export default matchSlice.reducer;

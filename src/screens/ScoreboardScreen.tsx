@@ -12,26 +12,32 @@ import { ThemedText } from '#/components/themed-text';
 import { ThemedView } from '#/components/themed-view';
 import { useColorScheme } from '#/hooks/use-color-scheme';
 import { useAppDispatch, useAppSelector } from '#/redux/hooks';
-import { addPoint, selectMatch, undoLastPoint } from '#/redux/matchSlice';
+import {
+  addPoint,
+  selectCanUndo,
+  selectIsMatchInProgress,
+  selectMatch,
+  selectOrderedTeams,
+  undoLastPoint,
+} from '#/redux/matchSlice';
 import type { TeamId } from '#/types/match';
 
 export default function ScoreboardScreen() {
   const router = useRouter();
   const dispatch = useAppDispatch();
   const matchState = useAppSelector(selectMatch);
+  const orderedTeams = useAppSelector(selectOrderedTeams);
+  const matchInProgress = useAppSelector(selectIsMatchInProgress);
+  const canUndo = useAppSelector(selectCanUndo);
   const colorScheme = useColorScheme() ?? 'light';
   const cardBackground = colorScheme === 'light' ? '#ffffff' : '#0f172a';
   const dividerColor = colorScheme === 'light' ? '#e2e8f0' : '#1f2937';
-  const matchInProgress = matchState.status === 'in-progress';
 
   useEffect(() => {
     if (!matchInProgress) {
       router.replace('/');
     }
   }, [matchInProgress, router]);
-
-  const { teams } = matchState;
-  const orderedTeams = (['sideA', 'sideB'] as TeamId[]).map((id) => teams[id]);
 
   const handleAddPoint = useCallback(
     (teamId: TeamId) => {
@@ -49,7 +55,6 @@ export default function ScoreboardScreen() {
   }
 
   const topBarMatchType = matchState.matchType === 'singles' ? 'Singles' : 'Doubles';
-  const canUndo = matchState.history.length > 0;
 
   return (
     <ThemedView style={styles.container}>
