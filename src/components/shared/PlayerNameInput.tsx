@@ -1,13 +1,33 @@
-import { StyleSheet, Text, TextInput, TextInputProps, View } from 'react-native';
+import {
+  StyleSheet,
+  Text,
+  TextInput,
+  TextInputProps,
+  View,
+  type StyleProp,
+  type TextStyle,
+  type ViewStyle,
+} from 'react-native';
 
 import { useColorScheme } from '#/hooks/use-color-scheme';
 
 export type PlayerNameInputProps = TextInputProps & {
   label: string;
   errorMessage?: string;
+  containerStyle?: StyleProp<ViewStyle>;
+  labelStyle?: StyleProp<TextStyle>;
+  errorTextStyle?: StyleProp<TextStyle>;
 };
 
-export function PlayerNameInput({ label, errorMessage, style, ...textInputProps }: PlayerNameInputProps) {
+export function PlayerNameInput({
+  label,
+  errorMessage,
+  style,
+  containerStyle,
+  labelStyle,
+  errorTextStyle,
+  ...textInputProps
+}: PlayerNameInputProps) {
   const colorScheme = useColorScheme() ?? 'light';
   const labelColor = colorScheme === 'light' ? '#1f2937' : '#e5e7eb';
   const inputTextColor = colorScheme === 'light' ? '#0f172a' : '#f8fafc';
@@ -18,8 +38,8 @@ export function PlayerNameInput({ label, errorMessage, style, ...textInputProps 
   const placeholderColor = colorScheme === 'light' ? '#94a3b8' : '#64748b';
 
   return (
-    <View style={styles.container}>
-      <Text style={[styles.label, { color: labelColor }]}>{label}</Text>
+    <View style={[styles.container, containerStyle]}>
+      <Text style={[styles.label, { color: labelColor }, labelStyle]}>{label}</Text>
       <TextInput
         placeholderTextColor={placeholderColor}
         style={[
@@ -29,7 +49,9 @@ export function PlayerNameInput({ label, errorMessage, style, ...textInputProps 
         ]}
         {...textInputProps}
       />
-      {Boolean(errorMessage) && <Text style={[styles.error, { color: errorColor }]}>{errorMessage}</Text>}
+      {Boolean(errorMessage) && (
+        <Text style={[styles.error, { color: errorColor }, errorTextStyle]}>{errorMessage}</Text>
+      )}
     </View>
   );
 }

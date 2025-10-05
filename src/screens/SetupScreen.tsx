@@ -8,6 +8,7 @@ import {
   StyleSheet,
   Text,
   View,
+  useWindowDimensions,
 } from 'react-native';
 import type { StyleProp, ViewStyle } from 'react-native';
 
@@ -33,6 +34,17 @@ export default function SetupScreen() {
   const [matchType, setMatchType] = useState<MatchType>('singles');
   const [playerNames, setPlayerNames] = useState<PlayerNamesState>(initialPlayerNames);
   const [showValidation, setShowValidation] = useState(false);
+  const colorScheme = useColorScheme() ?? 'light';
+  const { width: screenWidth, height: screenHeight } = useWindowDimensions();
+
+  const courtBackground = colorScheme === 'light' ? '#0a8f3d' : '#064e3b';
+  const courtLineColor = '#f8fafc';
+  const sideContainerOverlay = colorScheme === 'light' ? 'rgba(255,255,255,0.14)' : 'rgba(15,23,42,0.4)';
+  const sideBorderColor = colorScheme === 'light' ? 'rgba(255,255,255,0.4)' : 'rgba(226,232,240,0.5)';
+  const sideLabelColor = colorScheme === 'light' ? '#f8fafc' : '#e0f2fe';
+  const inputBackground = colorScheme === 'light' ? 'rgba(255,255,255,0.92)' : 'rgba(15,23,42,0.92)';
+  const inputTextColor = colorScheme === 'light' ? '#0f172a' : '#f8fafc';
+  const inputLabelColor = colorScheme === 'light' ? '#065f46' : '#bfdbfe';
 
   const requiredNames = useMemo(() => {
     if (matchType === 'singles') {
@@ -87,8 +99,25 @@ export default function SetupScreen() {
 
   const nameError = showValidation ? 'Please enter a name' : undefined;
 
+  const courtDimensions = useMemo(() => {
+    const horizontalPadding = 32; // container padding (16 left + 16 right)
+    const aspectRatio = 13 / 6;
+    const availableWidth = Math.max(screenWidth - horizontalPadding, 320);
+    const maxCourtHeight = Math.max(screenHeight * 0.7, 320);
+
+    let computedWidth = availableWidth;
+    let computedHeight = computedWidth / aspectRatio;
+
+    if (computedHeight > maxCourtHeight) {
+      computedHeight = maxCourtHeight;
+      computedWidth = computedHeight * aspectRatio;
+    }
+
+    return { width: computedWidth, height: computedHeight };
+  }, [screenHeight, screenWidth]);
+
   return (
-    <ThemedView style={styles.container}>
+    <ThemedView style={styles.container} lightColor={courtBackground} darkColor={courtBackground}>
       <KeyboardAvoidingView
         behavior={Platform.OS === 'ios' ? 'padding' : undefined}
         style={styles.flexContainer}
@@ -98,7 +127,7 @@ export default function SetupScreen() {
             Match Setup
           </ThemedText>
 
-          <View style={styles.section}>
+          <View style={styles.matchTypeSection}>
             <ThemedText type="subtitle" style={styles.sectionTitle}>
               Match Type
             </ThemedText>
@@ -117,12 +146,30 @@ export default function SetupScreen() {
             </View>
           </View>
 
-          <View style={styles.section}>
-            <ThemedText type="subtitle" style={styles.sectionTitle}>
-              Side A
-            </ThemedText>
-            <View>
-              <View style={styles.inputWrapper}>
+          <View style={styles.courtWrapper}>
+            <View
+              style={[
+                styles.court,
+                courtDimensions,
+                {
+                  borderColor: courtLineColor,
+                  backgroundColor: courtBackground,
+                },
+              ]}
+            >
+              <View
+                style={[
+                  styles.playerZone,
+                  matchType === 'doubles'
+                    ? styles.playerZoneTopLeft
+                    : styles.playerZoneTopCenter,
+                  {
+                    backgroundColor: sideContainerOverlay,
+                    borderColor: sideBorderColor,
+                  },
+                ]}
+              >
+                <ThemedText style={[styles.sideLabel, { color: sideLabelColor }]}>Side A</ThemedText>
                 <PlayerNameInput
                   label={matchType === 'doubles' ? 'Player 1' : 'Player'}
                   value={playerNames.sideA[0]}
@@ -132,10 +179,25 @@ export default function SetupScreen() {
                   errorMessage={
                     showValidation && playerNames.sideA[0].trim().length === 0 ? nameError : undefined
                   }
+                  labelStyle={[styles.inputLabel, { color: inputLabelColor }]}
+                  style={[
+                    styles.inputOnCourt,
+                    { backgroundColor: inputBackground, color: inputTextColor },
+                  ]}
                 />
               </View>
+
               {matchType === 'doubles' && (
-                <View style={styles.inputWrapper}>
+                <View
+                  style={[
+                    styles.playerZone,
+                    styles.playerZoneTopRight,
+                    {
+                      backgroundColor: sideContainerOverlay,
+                      borderColor: sideBorderColor,
+                    },
+                  ]}
+                >
                   <PlayerNameInput
                     label="Player 2"
                     value={playerNames.sideA[1]}
@@ -145,31 +207,56 @@ export default function SetupScreen() {
                     errorMessage={
                       showValidation && playerNames.sideA[1].trim().length === 0 ? nameError : undefined
                     }
+                    labelStyle={[styles.inputLabel, { color: inputLabelColor }]}
+                    style={[
+                      styles.inputOnCourt,
+                      { backgroundColor: inputBackground, color: inputTextColor },
+                    ]}
                   />
                 </View>
               )}
-            </View>
-          </View>
 
-          <View style={styles.section}>
-            <ThemedText type="subtitle" style={styles.sectionTitle}>
-              Side B
-            </ThemedText>
-            <View>
-              <View style={styles.inputWrapper}>
+              <View
+                style={[
+                  styles.playerZone,
+                  matchType === 'doubles'
+                    ? styles.playerZoneBottomLeft
+                    : styles.playerZoneBottomCenter,
+                  {
+                    backgroundColor: sideContainerOverlay,
+                    borderColor: sideBorderColor,
+                  },
+                ]}
+              >
+                <ThemedText style={[styles.sideLabel, { color: sideLabelColor }]}>Side B</ThemedText>
                 <PlayerNameInput
                   label={matchType === 'doubles' ? 'Player 1' : 'Player'}
                   value={playerNames.sideB[0]}
                   onChangeText={(text) => handleNameChange('sideB', 0, text)}
-                  returnKeyType="next"
+                  returnKeyType={matchType === 'doubles' ? 'next' : 'done'}
                   autoCapitalize="words"
                   errorMessage={
                     showValidation && playerNames.sideB[0].trim().length === 0 ? nameError : undefined
                   }
+                  labelStyle={[styles.inputLabel, { color: inputLabelColor }]}
+                  style={[
+                    styles.inputOnCourt,
+                    { backgroundColor: inputBackground, color: inputTextColor },
+                  ]}
                 />
               </View>
+
               {matchType === 'doubles' && (
-                <View style={styles.inputWrapper}>
+                <View
+                  style={[
+                    styles.playerZone,
+                    styles.playerZoneBottomRight,
+                    {
+                      backgroundColor: sideContainerOverlay,
+                      borderColor: sideBorderColor,
+                    },
+                  ]}
+                >
                   <PlayerNameInput
                     label="Player 2"
                     value={playerNames.sideB[1]}
@@ -179,9 +266,24 @@ export default function SetupScreen() {
                     errorMessage={
                       showValidation && playerNames.sideB[1].trim().length === 0 ? nameError : undefined
                     }
+                    labelStyle={[styles.inputLabel, { color: inputLabelColor }]}
+                    style={[
+                      styles.inputOnCourt,
+                      { backgroundColor: inputBackground, color: inputTextColor },
+                    ]}
                   />
                 </View>
               )}
+
+              <View pointerEvents="none" style={styles.courtLineLayer}>
+                <View style={[styles.courtOutline, { borderColor: courtLineColor }]} />
+                <View style={[styles.netLine, { backgroundColor: courtLineColor }]} />
+                <View style={[styles.midCourtLine, { backgroundColor: courtLineColor }]} />
+                <View style={[styles.serviceLineTop, { backgroundColor: courtLineColor }]} />
+                <View style={[styles.serviceLineBottom, { backgroundColor: courtLineColor }]} />
+                <View style={[styles.singlesBoundaryLeft, { backgroundColor: courtLineColor }]} />
+                <View style={[styles.singlesBoundaryRight, { backgroundColor: courtLineColor }]} />
+              </View>
             </View>
           </View>
         </ScrollView>
@@ -244,35 +346,160 @@ function MatchTypeToggle({ label, isActive, onPress, style }: MatchTypeTogglePro
 const styles = StyleSheet.create({
   container: {
     flex: 1,
-    paddingHorizontal: 24,
-    paddingVertical: 32,
+    paddingHorizontal: 16,
+    paddingVertical: 24,
   },
   flexContainer: {
     flex: 1,
   },
   scrollContainer: {
-    paddingBottom: 32,
+    flexGrow: 1,
+    paddingBottom: 40,
+    alignItems: 'center',
   },
   heading: {
     marginBottom: 24,
+    textAlign: 'center',
   },
-  section: {
+  matchTypeSection: {
+    width: '100%',
+    maxWidth: 520,
     marginBottom: 24,
   },
   sectionTitle: {
     marginBottom: 12,
+    textAlign: 'center',
   },
   matchTypeRow: {
     flexDirection: 'row',
+    justifyContent: 'center',
   },
   matchTypeToggleSpacing: {
     marginRight: 12,
   },
-  inputWrapper: {
-    marginBottom: 16,
+  courtWrapper: {
+    width: '100%',
+    alignItems: 'center',
+    marginBottom: 32,
+  },
+  court: {
+    width: '100%',
+    borderRadius: 28,
+    borderWidth: 6,
+    position: 'relative',
+    overflow: 'hidden',
+  },
+  courtLineLayer: {
+    ...StyleSheet.absoluteFillObject,
+    zIndex: 2,
+  },
+  courtOutline: {
+    position: 'absolute',
+    top: '6%',
+    bottom: '6%',
+    left: '6%',
+    right: '6%',
+    borderWidth: 2,
+    borderRadius: 20,
+  },
+  netLine: {
+    position: 'absolute',
+    left: '6%',
+    right: '6%',
+    top: '50%',
+    height: 4,
+  },
+  midCourtLine: {
+    position: 'absolute',
+    top: '6%',
+    bottom: '6%',
+    left: '50%',
+    width: 3,
+  },
+  serviceLineTop: {
+    position: 'absolute',
+    left: '6%',
+    right: '6%',
+    top: '28%',
+    height: 3,
+  },
+  serviceLineBottom: {
+    position: 'absolute',
+    left: '6%',
+    right: '6%',
+    bottom: '28%',
+    height: 3,
+  },
+  singlesBoundaryLeft: {
+    position: 'absolute',
+    top: '6%',
+    bottom: '6%',
+    left: '22%',
+    width: 2,
+  },
+  singlesBoundaryRight: {
+    position: 'absolute',
+    top: '6%',
+    bottom: '6%',
+    right: '22%',
+    width: 2,
+  },
+  playerZone: {
+    position: 'absolute',
+    padding: 16,
+    borderRadius: 18,
+    borderWidth: 1,
+    justifyContent: 'center',
+    zIndex: 1,
+  },
+  playerZoneTopLeft: {
+    top: '10%',
+    left: '8%',
+    width: '38%',
+  },
+  playerZoneTopRight: {
+    top: '10%',
+    right: '8%',
+    width: '38%',
+  },
+  playerZoneBottomLeft: {
+    bottom: '10%',
+    left: '8%',
+    width: '38%',
+  },
+  playerZoneBottomRight: {
+    bottom: '10%',
+    right: '8%',
+    width: '38%',
+  },
+  playerZoneTopCenter: {
+    top: '12%',
+    left: '14%',
+    right: '14%',
+  },
+  playerZoneBottomCenter: {
+    bottom: '12%',
+    left: '14%',
+    right: '14%',
+  },
+  sideLabel: {
+    fontSize: 18,
+    fontWeight: '700',
+    textAlign: 'center',
+    letterSpacing: 1.2,
+    marginBottom: 12,
+  },
+  inputLabel: {
+    textTransform: 'uppercase',
+    fontSize: 12,
+    fontWeight: '600',
+    letterSpacing: 1,
+  },
+  inputOnCourt: {
+    borderWidth: 0,
   },
   footer: {
-    paddingTop: 12,
+    paddingTop: 16,
   },
   validationMessage: {
     color: '#ef4444',
