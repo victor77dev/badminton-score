@@ -1,6 +1,6 @@
 import { useCallback, useEffect, useMemo, useState } from 'react';
+import { useRouter } from 'expo-router';
 import {
-  Alert,
   KeyboardAvoidingView,
   Platform,
   Pressable,
@@ -15,8 +15,8 @@ import { PlayerNameInput, PrimaryButton } from '#/components/shared';
 import { ThemedText } from '#/components/themed-text';
 import { ThemedView } from '#/components/themed-view';
 import { useColorScheme } from '#/hooks/use-color-scheme';
-
-export type MatchType = 'singles' | 'doubles';
+import { useMatch } from '#/state/MatchContext';
+import type { MatchType } from '#/types/match';
 
 type TeamKey = 'sideA' | 'sideB';
 
@@ -28,6 +28,8 @@ const initialPlayerNames: PlayerNamesState = {
 };
 
 export default function SetupScreen() {
+  const router = useRouter();
+  const { startMatch } = useMatch();
   const [matchType, setMatchType] = useState<MatchType>('singles');
   const [playerNames, setPlayerNames] = useState<PlayerNamesState>(initialPlayerNames);
   const [showValidation, setShowValidation] = useState(false);
@@ -79,9 +81,9 @@ export default function SetupScreen() {
       return;
     }
 
-    // TODO: wire up navigation and match state when the scoreboard is implemented.
-    Alert.alert('Match setup complete', 'Score tracking will be available in the next step.');
-  }, [allNamesProvided]);
+    startMatch({ matchType, playerNames });
+    router.push('/scoreboard');
+  }, [allNamesProvided, matchType, playerNames, router, startMatch]);
 
   const nameError = showValidation ? 'Please enter a name' : undefined;
 

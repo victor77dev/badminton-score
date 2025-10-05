@@ -21,14 +21,13 @@ export function TopBar({
   const backgroundColor = colorScheme === 'light' ? '#0f172a' : '#020617';
   const subtleTextColor = colorScheme === 'light' ? 'rgba(255,255,255,0.72)' : 'rgba(226,232,240,0.72)';
   const accentColor = colorScheme === 'light' ? '#38bdf8' : '#38bdf8';
+  const subtitleText = venueName ? `${matchType} • ${venueName}` : matchType;
 
   return (
     <View style={[styles.container, { backgroundColor }]}>
       <View>
         <Text style={styles.title}>{matchTitle}</Text>
-        <Text style={[styles.subtitle, { color: subtleTextColor }]}>
-          {matchType} {venueName ? `• ${venueName}` : ''}
-        </Text>
+        <Text style={[styles.subtitle, { color: subtleTextColor }]}>{subtitleText}</Text>
       </View>
       <View style={styles.gameInfoContainer}>
         <Text style={[styles.gameLabel, { color: subtleTextColor }]}>Game</Text>

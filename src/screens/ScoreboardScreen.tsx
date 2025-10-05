@@ -1,4 +1,6 @@
+import { useEffect, useMemo } from 'react';
 import { StyleSheet, View } from 'react-native';
+import { useRouter } from 'expo-router';
 
 import {
   PrimaryButton,
@@ -9,77 +11,84 @@ import {
 import { ThemedText } from '#/components/themed-text';
 import { ThemedView } from '#/components/themed-view';
 import { useColorScheme } from '#/hooks/use-color-scheme';
-
-const mockMatchState = {
-  matchTitle: 'Club Championship',
-  matchType: 'Singles' as const,
-  currentGame: 1,
-  totalGames: 3,
-  venue: 'Court 2',
-  teams: [
-    {
-      id: 'sideA',
-      label: 'Side A',
-      playerName: 'Alex Chen',
-      score: 18,
-      serving: true,
-    },
-    {
-      id: 'sideB',
-      label: 'Side B',
-      playerName: 'Priya Singh',
-      score: 15,
-      serving: false,
-    },
-  ],
-};
+import { useMatch } from '#/state/MatchContext';
+import type { TeamId } from '#/types/match';
 
 export default function ScoreboardScreen() {
+  const router = useRouter();
+  const { matchState, addPoint, undoLastPoint } = useMatch();
   const colorScheme = useColorScheme() ?? 'light';
   const cardBackground = colorScheme === 'light' ? '#ffffff' : '#0f172a';
   const dividerColor = colorScheme === 'light' ? '#e2e8f0' : '#1f2937';
+  const matchInProgress = matchState.status === 'in-progress';
+
+  useEffect(() => {
+    if (!matchInProgress) {
+      router.replace('/');
+    }
+  }, [matchInProgress, router]);
+
+  const orderedTeams = useMemo(
+    () => (['sideA', 'sideB'] as TeamId[]).map((id) => matchState.teams[id]),
+    [matchState.teams],
+  );
+
+  if (!matchInProgress) {
+    return null;
+  }
+
+  const topBarMatchType = matchState.matchType === 'singles' ? 'Singles' : 'Doubles';
+  const canUndo = matchState.history.length > 0;
 
   return (
     <ThemedView style={styles.container}>
       <TopBar
-        matchTitle={mockMatchState.matchTitle}
-        matchType={mockMatchState.matchType}
-        currentGame={mockMatchState.currentGame}
-        totalGames={mockMatchState.totalGames}
-        venueName={mockMatchState.venue}
+        matchTitle={matchState.matchTitle}
+        matchType={topBarMatchType}
+        currentGame={matchState.currentGame}
+        totalGames={matchState.totalGames}
+        venueName={matchState.venueName}
       />
 
       <View style={[styles.scoreboardCard, { backgroundColor: cardBackground }]}>
         <View style={styles.scoreRow}>
-          {mockMatchState.teams.map((team) => (
-            <View key={team.id} style={styles.teamColumn}>
-              <View style={styles.teamHeader}>
-                <ThemedText type="subtitle" style={styles.teamLabel}>
-                  {team.label}
-                </ThemedText>
-                <View style={styles.serveRow}>
-                  <ServeIndicator active={team.serving} />
-                  <ThemedText type="default" style={styles.serveText}>
-                    {team.serving ? 'Serving' : 'Receiving'}
+          {orderedTeams.map((team) => {
+            const isServing = matchState.servingTeam === team.id;
+            const playerLabel = team.players.join(' & ') || 'Ready to Play';
+
+            return (
+              <View key={team.id} style={styles.teamColumn}>
+                <View style={styles.teamHeader}>
+                  <ThemedText type="subtitle" style={styles.teamLabel}>
+                    {team.label}
                   </ThemedText>
+                  <View style={styles.serveRow}>
+                    <ServeIndicator active={isServing} />
+                    <ThemedText type="default" style={styles.serveText}>
+                      {isServing ? 'Serving' : 'Receiving'}
+                    </ThemedText>
+                  </View>
+                </View>
+                <ScoreBox
+                  playerName={playerLabel}
+                  score={team.score}
+                  highlight={isServing}
+                />
+                <View style={styles.pointButtonWrapper}>
+                  <PrimaryButton
+                    label="+1 Point"
+                    onPress={() => addPoint(team.id)}
+                  />
                 </View>
               </View>
-              <ScoreBox
-                playerName={team.playerName}
-                score={team.score}
-                highlight={team.serving}
-              />
-              <View style={styles.pointButtonWrapper}>
-                <PrimaryButton label="+1 Point" onPress={() => {}} />
-              </View>
-            </View>
-          ))}
+            );
+          })}
         </View>
 
         <View style={[styles.divider, { backgroundColor: dividerColor }]} />
 
         <View style={styles.undoWrapper}>
-          <PrimaryButton label="Undo" disabled onPress={() => {}} />
+          <PrimaryButton label="Undo" disabled={!canUndo} onPress={undoLastPoint} />
         </View>
       </View>
     </ThemedView>
