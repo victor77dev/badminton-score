@@ -12,7 +12,6 @@ import { ThemedText } from '#/components/themed-text';
 import { ThemedView } from '#/components/themed-view';
 import { useColorScheme } from '#/hooks/use-color-scheme';
 import { useMatch } from '#/state/MatchContext';
-import type { TeamId } from '#/types/match';
 
 export default function ScoreboardScreen() {
   const router = useRouter();
@@ -29,8 +28,8 @@ export default function ScoreboardScreen() {
   }, [matchInProgress, router]);
 
   const orderedTeams = useMemo(
-    () => (['sideA', 'sideB'] as TeamId[]).map((id) => matchState.teams[id]),
-    [matchState.teams],
+    () => matchState.courtOrder.map((id) => matchState.teams[id]),
+    [matchState.courtOrder, matchState.teams],
   );
 
   if (!matchInProgress) {
