@@ -4,6 +4,8 @@ import type { PayloadAction } from '@reduxjs/toolkit';
 import type { MatchType, TeamId } from '#/types/match';
 import type { RootState } from './store';
 
+export type CourtOrder = [TeamId, TeamId];
+
 export type TeamState = {
   id: TeamId;
   label: string;
@@ -33,11 +35,16 @@ export type ScoreboardViewModel = {
 export type ScoreSnapshot = {
   scores: Record<TeamId, number>;
   servingTeam: TeamId;
+  currentGame: number;
+  gamesWon: Record<TeamId, number>;
+  status: MatchStatus;
+  courtOrder: CourtOrder;
+  hasSwitchedMidGame: boolean;
 };
 
 export type PlayerNameEntries = Record<TeamId, [string, string]>;
 
-export type MatchStatus = 'idle' | 'in-progress';
+export type MatchStatus = 'idle' | 'in-progress' | 'completed';
 
 export type MatchState = {
   status: MatchStatus;
@@ -47,6 +54,9 @@ export type MatchState = {
   totalGames: number;
   venueName?: string;
   servingTeam: TeamId;
+  gamesWon: Record<TeamId, number>;
+  courtOrder: CourtOrder;
+  hasSwitchedMidGame: boolean;
   teams: Record<TeamId, TeamState>;
   history: ScoreSnapshot[];
 };
@@ -70,6 +80,12 @@ const initialState: MatchState = {
   currentGame: 1,
   totalGames: 3,
   servingTeam: 'sideA',
+  gamesWon: {
+    sideA: 0,
+    sideB: 0,
+  },
+  courtOrder: ['sideA', 'sideB'],
+  hasSwitchedMidGame: false,
   teams: {
     sideA: defaultTeamState('sideA', 'Side A'),
     sideB: defaultTeamState('sideB', 'Side B'),
@@ -101,7 +117,13 @@ const matchSlice = createSlice({
       state.matchType = matchType;
       state.currentGame = 1;
       state.totalGames = 3;
-      state.servingTeam = 'sideA';
+      state.gamesWon = {
+        sideA: 0,
+        sideB: 0,
+      };
+      state.courtOrder = ['sideA', 'sideB'];
+      state.servingTeam = state.courtOrder[0];
+      state.hasSwitchedMidGame = false;
       state.history = [];
       state.teams.sideA = {
         id: 'sideA',
@@ -122,20 +144,75 @@ const matchSlice = createSlice({
       }
 
       const teamId = action.payload;
+      const opponentId: TeamId = teamId === 'sideA' ? 'sideB' : 'sideA';
       const snapshot: ScoreSnapshot = {
         scores: {
           sideA: state.teams.sideA.score,
           sideB: state.teams.sideB.score,
         },
         servingTeam: state.servingTeam,
+        currentGame: state.currentGame,
+        gamesWon: {
+          sideA: state.gamesWon.sideA,
+          sideB: state.gamesWon.sideB,
+        },
+        status: state.status,
+        courtOrder: [state.courtOrder[0], state.courtOrder[1]] as CourtOrder,
+        hasSwitchedMidGame: state.hasSwitchedMidGame,
       };
 
       state.history.push(snapshot);
       state.teams[teamId].score += 1;
-      state.servingTeam = teamId;
+
+      const updatedScores: Record<TeamId, number> = {
+        sideA: state.teams.sideA.score,
+        sideB: state.teams.sideB.score,
+      };
+
+      let nextCourtOrder: CourtOrder = state.courtOrder;
+      let hasSwitchedMidGame = state.hasSwitchedMidGame;
+
+      if (
+        !state.hasSwitchedMidGame &&
+        state.currentGame === state.totalGames &&
+        (updatedScores.sideA === 11 || updatedScores.sideB === 11)
+      ) {
+        nextCourtOrder = [state.courtOrder[1], state.courtOrder[0]] as CourtOrder;
+        hasSwitchedMidGame = true;
+      }
+
+      const winnerScore = updatedScores[teamId];
+      const opponentScore = updatedScores[opponentId];
+      const hasTwoPointLead = winnerScore >= 21 && winnerScore - opponentScore >= 2;
+      const reachedMaxPoint = winnerScore === 30;
+      const gameWon = hasTwoPointLead || reachedMaxPoint;
+
+      let servingTeam: TeamId = teamId;
+
+      if (gameWon) {
+        state.gamesWon[teamId] += 1;
+
+        const gamesNeededToWin = Math.floor(state.totalGames / 2) + 1;
+        const matchWon = state.gamesWon[teamId] >= gamesNeededToWin;
+
+        if (matchWon) {
+          state.status = 'completed';
+        } else {
+          state.currentGame += 1;
+          state.teams.sideA.score = 0;
+          state.teams.sideB.score = 0;
+          servingTeam = teamId;
+          nextCourtOrder = [state.courtOrder[1], state.courtOrder[0]] as CourtOrder;
+          hasSwitchedMidGame = false;
+        }
+      }
+
+      state.servingTeam = servingTeam;
+      state.courtOrder = nextCourtOrder;
+      state.hasSwitchedMidGame = hasSwitchedMidGame;
     },
     undoLastPoint(state) {
-      if (state.status !== 'in-progress' || state.history.length === 0) {
+      if (state.history.length === 0) {
         return;
       }
 
@@ -148,6 +225,12 @@ const matchSlice = createSlice({
       state.teams.sideA.score = previousSnapshot.scores.sideA;
       state.teams.sideB.score = previousSnapshot.scores.sideB;
       state.servingTeam = previousSnapshot.servingTeam;
+      state.currentGame = previousSnapshot.currentGame;
+      state.gamesWon.sideA = previousSnapshot.gamesWon.sideA;
+      state.gamesWon.sideB = previousSnapshot.gamesWon.sideB;
+      state.status = previousSnapshot.status;
+      state.courtOrder = previousSnapshot.courtOrder;
+      state.hasSwitchedMidGame = previousSnapshot.hasSwitchedMidGame;
     },
   },
 });
