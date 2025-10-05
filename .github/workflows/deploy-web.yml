@@ -28,6 +28,9 @@ jobs:
       - name: Install dependencies
         run: npm ci
 
+      - name: Install lightningcss native binary
+        run: npm install lightningcss-linux-x64-gnu
+
       - name: Determine base URL
         id: base
         run: |
