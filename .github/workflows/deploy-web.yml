@@ -4,6 +4,7 @@ on:
   push:
     branches:
       - main
+      - fix-github-page
   workflow_dispatch:
 
 concurrency:
@@ -51,7 +52,8 @@ jobs:
           EXPO_USE_STATIC: "1"
           EXPO_NO_TELEMETRY: "1"
           EXPO_PUBLIC_BASE_URL: ${{ steps.base.outputs.base_url }}
-        run: npx expo export --platform web --output-dir dist --base-url "${{ steps.base.outputs.base_path }}"
+          EXPO_PUBLIC_BASE_PATH: ${{ steps.base.outputs.base_path }}
+        run: npx expo export --platform web --output-dir dist
 
       - name: Prepare Pages artifacts
         run: touch dist/.nojekyll

@@ -41,6 +41,7 @@
       ]
     ],
     "experiments": {
+      "baseUrl": "/badminton-score",
       "typedRoutes": true,
       "reactCompiler": true
     }
