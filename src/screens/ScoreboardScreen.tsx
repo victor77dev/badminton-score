@@ -1,4 +1,4 @@
-import { useEffect, useMemo } from 'react';
+import { useEffect, useCallback } from 'react';
 import { StyleSheet, View } from 'react-native';
 import { useRouter } from 'expo-router';
 
@@ -11,12 +11,14 @@ import {
 import { ThemedText } from '#/components/themed-text';
 import { ThemedView } from '#/components/themed-view';
 import { useColorScheme } from '#/hooks/use-color-scheme';
-import { useMatch } from '#/state/MatchContext';
+import { useAppDispatch, useAppSelector } from '#/redux/hooks';
+import { addPoint, selectMatch, undoLastPoint } from '#/redux/matchSlice';
 import type { TeamId } from '#/types/match';
 
 export default function ScoreboardScreen() {
   const router = useRouter();
-  const { matchState, addPoint, undoLastPoint } = useMatch();
+  const dispatch = useAppDispatch();
+  const matchState = useAppSelector(selectMatch);
   const colorScheme = useColorScheme() ?? 'light';
   const cardBackground = colorScheme === 'light' ? '#ffffff' : '#0f172a';
   const dividerColor = colorScheme === 'light' ? '#e2e8f0' : '#1f2937';
@@ -28,10 +30,19 @@ export default function ScoreboardScreen() {
     }
   }, [matchInProgress, router]);
 
-  const orderedTeams = useMemo(
-    () => (['sideA', 'sideB'] as TeamId[]).map((id) => matchState.teams[id]),
-    [matchState.teams],
+  const { teams } = matchState;
+  const orderedTeams = (['sideA', 'sideB'] as TeamId[]).map((id) => teams[id]);
+
+  const handleAddPoint = useCallback(
+    (teamId: TeamId) => {
+      dispatch(addPoint(teamId));
+    },
+    [dispatch],
   );
+
+  const handleUndo = useCallback(() => {
+    dispatch(undoLastPoint());
+  }, [dispatch]);
 
   if (!matchInProgress) {
     return null;
@@ -75,10 +86,7 @@ export default function ScoreboardScreen() {
                   highlight={isServing}
                 />
                 <View style={styles.pointButtonWrapper}>
-                  <PrimaryButton
-                    label="+1 Point"
-                    onPress={() => addPoint(team.id)}
-                  />
+                  <PrimaryButton label="+1 Point" onPress={() => handleAddPoint(team.id)} />
                 </View>
               </View>
             );
@@ -88,7 +96,7 @@ export default function ScoreboardScreen() {
         <View style={[styles.divider, { backgroundColor: dividerColor }]} />
 
         <View style={styles.undoWrapper}>
-          <PrimaryButton label="Undo" disabled={!canUndo} onPress={undoLastPoint} />
+          <PrimaryButton label="Undo" disabled={!canUndo} onPress={handleUndo} />
         </View>
       </View>
     </ThemedView>
