@@ -8,6 +8,7 @@ import {
   StyleSheet,
   Text,
   View,
+  useWindowDimensions,
 } from 'react-native';
 import type { StyleProp, ViewStyle } from 'react-native';
 
@@ -34,6 +35,7 @@ export default function SetupScreen() {
   const [playerNames, setPlayerNames] = useState<PlayerNamesState>(initialPlayerNames);
   const [showValidation, setShowValidation] = useState(false);
   const colorScheme = useColorScheme() ?? 'light';
+  const { width: screenWidth, height: screenHeight } = useWindowDimensions();
 
   const courtBackground = colorScheme === 'light' ? '#0a8f3d' : '#064e3b';
   const courtLineColor = '#f8fafc';
@@ -97,6 +99,23 @@ export default function SetupScreen() {
 
   const nameError = showValidation ? 'Please enter a name' : undefined;
 
+  const courtDimensions = useMemo(() => {
+    const horizontalPadding = 32; // container padding (16 left + 16 right)
+    const aspectRatio = 13 / 6;
+    const availableWidth = Math.max(screenWidth - horizontalPadding, 320);
+    const maxCourtHeight = Math.max(screenHeight * 0.7, 320);
+
+    let computedWidth = availableWidth;
+    let computedHeight = computedWidth / aspectRatio;
+
+    if (computedHeight > maxCourtHeight) {
+      computedHeight = maxCourtHeight;
+      computedWidth = computedHeight * aspectRatio;
+    }
+
+    return { width: computedWidth, height: computedHeight };
+  }, [screenHeight, screenWidth]);
+
   return (
     <ThemedView style={styles.container} lightColor={courtBackground} darkColor={courtBackground}>
       <KeyboardAvoidingView
@@ -131,6 +150,7 @@ export default function SetupScreen() {
             <View
               style={[
                 styles.court,
+                courtDimensions,
                 {
                   borderColor: courtLineColor,
                   backgroundColor: courtBackground,
@@ -333,6 +353,7 @@ const styles = StyleSheet.create({
     flex: 1,
   },
   scrollContainer: {
+    flexGrow: 1,
     paddingBottom: 40,
     alignItems: 'center',
   },
@@ -363,8 +384,6 @@ const styles = StyleSheet.create({
   },
   court: {
     width: '100%',
-    maxWidth: 520,
-    aspectRatio: 13 / 6,
     borderRadius: 28,
     borderWidth: 6,
     position: 'relative',
