@@ -10,16 +10,23 @@ export type PlayerNameInputProps = TextInputProps & {
 export function PlayerNameInput({ label, errorMessage, style, ...textInputProps }: PlayerNameInputProps) {
   const colorScheme = useColorScheme() ?? 'light';
   const labelColor = colorScheme === 'light' ? '#1f2937' : '#e5e7eb';
+  const inputTextColor = colorScheme === 'light' ? '#0f172a' : '#f8fafc';
   const borderColor = colorScheme === 'light' ? '#cbd5f5' : '#334155';
   const backgroundColor = colorScheme === 'light' ? '#ffffff' : '#0f172a';
   const errorColor = '#ef4444';
+  const computedBorderColor = errorMessage ? errorColor : borderColor;
+  const placeholderColor = colorScheme === 'light' ? '#94a3b8' : '#64748b';
 
   return (
     <View style={styles.container}>
       <Text style={[styles.label, { color: labelColor }]}>{label}</Text>
       <TextInput
-        placeholderTextColor={colorScheme === 'light' ? '#94a3b8' : '#64748b'}
-        style={[styles.input, { borderColor, backgroundColor, color: labelColor }, style]}
+        placeholderTextColor={placeholderColor}
+        style={[
+          styles.input,
+          { borderColor: computedBorderColor, backgroundColor, color: inputTextColor },
+          style,
+        ]}
         {...textInputProps}
       />
       {Boolean(errorMessage) && <Text style={[styles.error, { color: errorColor }]}>{errorMessage}</Text>}
