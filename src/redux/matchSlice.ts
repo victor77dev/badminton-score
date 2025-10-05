@@ -11,6 +11,25 @@ export type TeamState = {
   score: number;
 };
 
+export type ScoreboardTeam = {
+  id: TeamId;
+  label: string;
+  score: number;
+  isServing: boolean;
+  playerLabel: string;
+};
+
+export type ScoreboardViewModel = {
+  matchInProgress: boolean;
+  matchTitle: string;
+  matchTypeLabel: 'Singles' | 'Doubles';
+  currentGame: number;
+  totalGames: number;
+  venueName?: string;
+  canUndo: boolean;
+  teams: ScoreboardTeam[];
+};
+
 export type ScoreSnapshot = {
   scores: Record<TeamId, number>;
   servingTeam: TeamId;
@@ -146,6 +165,32 @@ export const selectCanUndo = createSelector(selectMatch, (match) => match.histor
 
 export const selectOrderedTeams = createSelector(selectMatch, (match) =>
   (['sideA', 'sideB'] as TeamId[]).map((id) => match.teams[id]),
+);
+
+const selectScoreboardTeams = createSelector(
+  [selectOrderedTeams, selectMatch],
+  (teams, match): ScoreboardTeam[] =>
+    teams.map((team) => ({
+      id: team.id,
+      label: team.label,
+      score: team.score,
+      isServing: match.servingTeam === team.id,
+      playerLabel: team.players.length > 0 ? team.players.join(' & ') : 'Ready to Play',
+    })),
+);
+
+export const selectScoreboardViewModel = createSelector(
+  [selectMatch, selectScoreboardTeams],
+  (match, teams): ScoreboardViewModel => ({
+    matchInProgress: match.status === 'in-progress',
+    matchTitle: match.matchTitle,
+    matchTypeLabel: match.matchType === 'singles' ? 'Singles' : 'Doubles',
+    currentGame: match.currentGame,
+    totalGames: match.totalGames,
+    venueName: match.venueName,
+    canUndo: match.history.length > 0,
+    teams,
+  }),
 );
 
 export default matchSlice.reducer;

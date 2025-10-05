@@ -12,23 +12,22 @@ import { ThemedText } from '#/components/themed-text';
 import { ThemedView } from '#/components/themed-view';
 import { useColorScheme } from '#/hooks/use-color-scheme';
 import { useAppDispatch, useAppSelector } from '#/redux/hooks';
-import {
-  addPoint,
-  selectCanUndo,
-  selectIsMatchInProgress,
-  selectMatch,
-  selectOrderedTeams,
-  undoLastPoint,
-} from '#/redux/matchSlice';
+import { addPoint, selectScoreboardViewModel, undoLastPoint } from '#/redux/matchSlice';
 import type { TeamId } from '#/types/match';
 
 export default function ScoreboardScreen() {
   const router = useRouter();
   const dispatch = useAppDispatch();
-  const matchState = useAppSelector(selectMatch);
-  const orderedTeams = useAppSelector(selectOrderedTeams);
-  const matchInProgress = useAppSelector(selectIsMatchInProgress);
-  const canUndo = useAppSelector(selectCanUndo);
+  const {
+    matchInProgress,
+    matchTitle,
+    matchTypeLabel,
+    currentGame,
+    totalGames,
+    venueName,
+    canUndo,
+    teams,
+  } = useAppSelector(selectScoreboardViewModel);
   const colorScheme = useColorScheme() ?? 'light';
   const cardBackground = colorScheme === 'light' ? '#ffffff' : '#0f172a';
   const dividerColor = colorScheme === 'light' ? '#e2e8f0' : '#1f2937';
@@ -54,48 +53,37 @@ export default function ScoreboardScreen() {
     return null;
   }
 
-  const topBarMatchType = matchState.matchType === 'singles' ? 'Singles' : 'Doubles';
-
   return (
     <ThemedView style={styles.container}>
       <TopBar
-        matchTitle={matchState.matchTitle}
-        matchType={topBarMatchType}
-        currentGame={matchState.currentGame}
-        totalGames={matchState.totalGames}
-        venueName={matchState.venueName}
+        matchTitle={matchTitle}
+        matchType={matchTypeLabel}
+        currentGame={currentGame}
+        totalGames={totalGames}
+        venueName={venueName}
       />
 
       <View style={[styles.scoreboardCard, { backgroundColor: cardBackground }]}>
         <View style={styles.scoreRow}>
-          {orderedTeams.map((team) => {
-            const isServing = matchState.servingTeam === team.id;
-            const playerLabel = team.players.join(' & ') || 'Ready to Play';
-
-            return (
-              <View key={team.id} style={styles.teamColumn}>
-                <View style={styles.teamHeader}>
-                  <ThemedText type="subtitle" style={styles.teamLabel}>
-                    {team.label}
+          {teams.map((team) => (
+            <View key={team.id} style={styles.teamColumn}>
+              <View style={styles.teamHeader}>
+                <ThemedText type="subtitle" style={styles.teamLabel}>
+                  {team.label}
+                </ThemedText>
+                <View style={styles.serveRow}>
+                  <ServeIndicator active={team.isServing} />
+                  <ThemedText type="default" style={styles.serveText}>
+                    {team.isServing ? 'Serving' : 'Receiving'}
                   </ThemedText>
-                  <View style={styles.serveRow}>
-                    <ServeIndicator active={isServing} />
-                    <ThemedText type="default" style={styles.serveText}>
-                      {isServing ? 'Serving' : 'Receiving'}
-                    </ThemedText>
-                  </View>
-                </View>
-                <ScoreBox
-                  playerName={playerLabel}
-                  score={team.score}
-                  highlight={isServing}
-                />
-                <View style={styles.pointButtonWrapper}>
-                  <PrimaryButton label="+1 Point" onPress={() => handleAddPoint(team.id)} />
                 </View>
               </View>
-            );
-          })}
+              <ScoreBox playerName={team.playerLabel} score={team.score} highlight={team.isServing} />
+              <View style={styles.pointButtonWrapper}>
+                <PrimaryButton label="+1 Point" onPress={() => handleAddPoint(team.id)} />
+              </View>
+            </View>
+          ))}
         </View>
 
         <View style={[styles.divider, { backgroundColor: dividerColor }]} />
