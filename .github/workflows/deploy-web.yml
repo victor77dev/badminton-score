@@ -31,15 +31,19 @@ jobs:
       - name: Install lightningcss native binary
         run: npm install lightningcss-linux-x64-gnu
 
-      - name: Determine base URL
+      - name: Determine base paths
         id: base
         run: |
           REPO_NAME="${GITHUB_REPOSITORY#*/}"
           if [ "$REPO_NAME" = "${GITHUB_REPOSITORY_OWNER}.github.io" ]; then
-            echo "base_url=https://${GITHUB_REPOSITORY_OWNER}.github.io" >> "$GITHUB_OUTPUT"
+            BASE_PATH="/"
+            BASE_URL="https://${GITHUB_REPOSITORY_OWNER}.github.io"
           else
-            echo "base_url=https://${GITHUB_REPOSITORY_OWNER}.github.io/${REPO_NAME}" >> "$GITHUB_OUTPUT"
+            BASE_PATH="/$REPO_NAME"
+            BASE_URL="https://${GITHUB_REPOSITORY_OWNER}.github.io/$REPO_NAME"
           fi
+          echo "base_path=$BASE_PATH" >> "$GITHUB_OUTPUT"
+          echo "base_url=$BASE_URL" >> "$GITHUB_OUTPUT"
 
       - name: Build static web bundle
         env:
@@ -47,7 +51,7 @@ jobs:
           EXPO_USE_STATIC: "1"
           EXPO_NO_TELEMETRY: "1"
           EXPO_PUBLIC_BASE_URL: ${{ steps.base.outputs.base_url }}
-        run: npx expo export --platform web --output-dir dist
+        run: npx expo export --platform web --output-dir dist --base-url "${{ steps.base.outputs.base_path }}"
 
       - name: Prepare Pages artifacts
         run: touch dist/.nojekyll
