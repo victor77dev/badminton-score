@@ -16,12 +16,11 @@ import { PlayerNameInput, PrimaryButton } from '#/components/shared';
 import { ThemedText } from '#/components/themed-text';
 import { ThemedView } from '#/components/themed-view';
 import { useColorScheme } from '#/hooks/use-color-scheme';
-import { useMatch } from '#/state/MatchContext';
-import type { MatchType } from '#/types/match';
+import { useAppDispatch } from '#/redux/hooks';
+import { startMatch } from '#/redux/matchSlice';
+import type { MatchType, TeamId } from '#/types/match';
 
-type TeamKey = 'sideA' | 'sideB';
-
-type PlayerNamesState = Record<TeamKey, [string, string]>;
+type PlayerNamesState = Record<TeamId, [string, string]>;
 
 const initialPlayerNames: PlayerNamesState = {
   sideA: ['', ''],
@@ -30,7 +29,7 @@ const initialPlayerNames: PlayerNamesState = {
 
 export default function SetupScreen() {
   const router = useRouter();
-  const { startMatch } = useMatch();
+  const dispatch = useAppDispatch();
   const [matchType, setMatchType] = useState<MatchType>('singles');
   const [playerNames, setPlayerNames] = useState<PlayerNamesState>(initialPlayerNames);
   const [showValidation, setShowValidation] = useState(false);
@@ -75,7 +74,7 @@ export default function SetupScreen() {
     setShowValidation(false);
   }, []);
 
-  const handleNameChange = useCallback((team: TeamKey, index: 0 | 1, value: string) => {
+  const handleNameChange = useCallback((team: TeamId, index: 0 | 1, value: string) => {
     setPlayerNames((current) => {
       const updatedTeam = [...current[team]] as [string, string];
       updatedTeam[index] = value;
@@ -93,9 +92,9 @@ export default function SetupScreen() {
       return;
     }
 
-    startMatch({ matchType, playerNames });
+    dispatch(startMatch({ matchType, playerNames }));
     router.push('/scoreboard');
-  }, [allNamesProvided, matchType, playerNames, router, startMatch]);
+  }, [allNamesProvided, dispatch, matchType, playerNames, router]);
 
   const nameError = showValidation ? 'Please enter a name' : undefined;
 
