@@ -139,67 +139,53 @@ export default function SetupScreen() {
             >
               <View
                 style={[
-                  styles.horizontalLine,
-                  styles.topServiceLine,
-                  { backgroundColor: courtLineColor },
-                ]}
-              />
-              <View
-                style={[
-                  styles.horizontalLine,
-                  styles.bottomServiceLine,
-                  { backgroundColor: courtLineColor },
-                ]}
-              />
-              <View
-                style={[
-                  styles.verticalLine,
-                  styles.leftServiceLine,
-                  { backgroundColor: courtLineColor },
-                ]}
-              />
-              <View
-                style={[
-                  styles.verticalLine,
-                  styles.rightServiceLine,
-                  { backgroundColor: courtLineColor },
-                ]}
-              />
-              <View
-                style={[
-                  styles.verticalLine,
-                  styles.singlesLine,
-                  styles.singlesLeft,
-                  { backgroundColor: courtLineColor },
-                ]}
-              />
-              <View
-                style={[
-                  styles.verticalLine,
-                  styles.singlesLine,
-                  styles.singlesRight,
-                  { backgroundColor: courtLineColor },
-                ]}
-              />
-              <View style={[styles.centerLine, { borderColor: courtLineColor }]} />
-
-              <View
-                style={[
-                  styles.sideContainer,
-                  styles.sideAContainer,
-                  { backgroundColor: sideContainerOverlay, borderColor: sideBorderColor },
+                  styles.playerZone,
+                  matchType === 'doubles'
+                    ? styles.playerZoneTopLeft
+                    : styles.playerZoneTopCenter,
+                  {
+                    backgroundColor: sideContainerOverlay,
+                    borderColor: sideBorderColor,
+                  },
                 ]}
               >
                 <ThemedText style={[styles.sideLabel, { color: sideLabelColor }]}>Side A</ThemedText>
-                <View style={[styles.inputSlot, matchType === 'singles' ? styles.inputSlotLast : null]}>
+                <PlayerNameInput
+                  label={matchType === 'doubles' ? 'Player 1' : 'Player'}
+                  value={playerNames.sideA[0]}
+                  onChangeText={(text) => handleNameChange('sideA', 0, text)}
+                  returnKeyType="next"
+                  autoCapitalize="words"
+                  errorMessage={
+                    showValidation && playerNames.sideA[0].trim().length === 0 ? nameError : undefined
+                  }
+                  labelStyle={[styles.inputLabel, { color: inputLabelColor }]}
+                  style={[
+                    styles.inputOnCourt,
+                    { backgroundColor: inputBackground, color: inputTextColor },
+                  ]}
+                />
+              </View>
+
+              {matchType === 'doubles' && (
+                <View
+                  style={[
+                    styles.playerZone,
+                    styles.playerZoneTopRight,
+                    {
+                      backgroundColor: sideContainerOverlay,
+                      borderColor: sideBorderColor,
+                    },
+                  ]}
+                >
                   <PlayerNameInput
-                    label={matchType === 'doubles' ? 'Player 1' : 'Player'}
-                    value={playerNames.sideA[0]}
-                    onChangeText={(text) => handleNameChange('sideA', 0, text)}
+                    label="Player 2"
+                    value={playerNames.sideA[1]}
+                    onChangeText={(text) => handleNameChange('sideA', 1, text)}
                     returnKeyType="next"
                     autoCapitalize="words"
                     errorMessage={
-                      showValidation && playerNames.sideA[0].trim().length === 0 ? nameError : undefined
+                      showValidation && playerNames.sideA[1].trim().length === 0 ? nameError : undefined
                     }
                     labelStyle={[styles.inputLabel, { color: inputLabelColor }]}
                     style={[
@@ -208,44 +194,57 @@ export default function SetupScreen() {
                     ]}
                   />
                 </View>
-                {matchType === 'doubles' && (
-                  <View style={[styles.inputSlot, styles.inputSlotLast]}>
-                    <PlayerNameInput
-                      label="Player 2"
-                      value={playerNames.sideA[1]}
-                      onChangeText={(text) => handleNameChange('sideA', 1, text)}
-                      returnKeyType="next"
-                      autoCapitalize="words"
-                      errorMessage={
-                        showValidation && playerNames.sideA[1].trim().length === 0 ? nameError : undefined
-                      }
-                      labelStyle={[styles.inputLabel, { color: inputLabelColor }]}
-                      style={[
-                        styles.inputOnCourt,
-                        { backgroundColor: inputBackground, color: inputTextColor },
-                      ]}
-                    />
-                  </View>
-                )}
-              </View>
+              )}
 
               <View
                 style={[
-                  styles.sideContainer,
-                  styles.sideBContainer,
-                  { backgroundColor: sideContainerOverlay, borderColor: sideBorderColor },
+                  styles.playerZone,
+                  matchType === 'doubles'
+                    ? styles.playerZoneBottomLeft
+                    : styles.playerZoneBottomCenter,
+                  {
+                    backgroundColor: sideContainerOverlay,
+                    borderColor: sideBorderColor,
+                  },
                 ]}
               >
                 <ThemedText style={[styles.sideLabel, { color: sideLabelColor }]}>Side B</ThemedText>
-                <View style={[styles.inputSlot, matchType === 'singles' ? styles.inputSlotLast : null]}>
+                <PlayerNameInput
+                  label={matchType === 'doubles' ? 'Player 1' : 'Player'}
+                  value={playerNames.sideB[0]}
+                  onChangeText={(text) => handleNameChange('sideB', 0, text)}
+                  returnKeyType={matchType === 'doubles' ? 'next' : 'done'}
+                  autoCapitalize="words"
+                  errorMessage={
+                    showValidation && playerNames.sideB[0].trim().length === 0 ? nameError : undefined
+                  }
+                  labelStyle={[styles.inputLabel, { color: inputLabelColor }]}
+                  style={[
+                    styles.inputOnCourt,
+                    { backgroundColor: inputBackground, color: inputTextColor },
+                  ]}
+                />
+              </View>
+
+              {matchType === 'doubles' && (
+                <View
+                  style={[
+                    styles.playerZone,
+                    styles.playerZoneBottomRight,
+                    {
+                      backgroundColor: sideContainerOverlay,
+                      borderColor: sideBorderColor,
+                    },
+                  ]}
+                >
                   <PlayerNameInput
-                    label={matchType === 'doubles' ? 'Player 1' : 'Player'}
-                    value={playerNames.sideB[0]}
-                    onChangeText={(text) => handleNameChange('sideB', 0, text)}
-                    returnKeyType="next"
+                    label="Player 2"
+                    value={playerNames.sideB[1]}
+                    onChangeText={(text) => handleNameChange('sideB', 1, text)}
+                    returnKeyType="done"
                     autoCapitalize="words"
                     errorMessage={
-                      showValidation && playerNames.sideB[0].trim().length === 0 ? nameError : undefined
+                      showValidation && playerNames.sideB[1].trim().length === 0 ? nameError : undefined
                     }
                     labelStyle={[styles.inputLabel, { color: inputLabelColor }]}
                     style={[
@@ -254,25 +253,16 @@ export default function SetupScreen() {
                     ]}
                   />
                 </View>
-                {matchType === 'doubles' && (
-                  <View style={[styles.inputSlot, styles.inputSlotLast]}>
-                    <PlayerNameInput
-                      label="Player 2"
-                      value={playerNames.sideB[1]}
-                      onChangeText={(text) => handleNameChange('sideB', 1, text)}
-                      returnKeyType="done"
-                      autoCapitalize="words"
-                      errorMessage={
-                        showValidation && playerNames.sideB[1].trim().length === 0 ? nameError : undefined
-                      }
-                      labelStyle={[styles.inputLabel, { color: inputLabelColor }]}
-                      style={[
-                        styles.inputOnCourt,
-                        { backgroundColor: inputBackground, color: inputTextColor },
-                      ]}
-                    />
-                  </View>
-                )}
+              )}
+
+              <View pointerEvents="none" style={styles.courtLineLayer}>
+                <View style={[styles.courtOutline, { borderColor: courtLineColor }]} />
+                <View style={[styles.netLine, { backgroundColor: courtLineColor }]} />
+                <View style={[styles.midCourtLine, { backgroundColor: courtLineColor }]} />
+                <View style={[styles.serviceLineTop, { backgroundColor: courtLineColor }]} />
+                <View style={[styles.serviceLineBottom, { backgroundColor: courtLineColor }]} />
+                <View style={[styles.singlesBoundaryLeft, { backgroundColor: courtLineColor }]} />
+                <View style={[styles.singlesBoundaryRight, { backgroundColor: courtLineColor }]} />
               </View>
             </View>
           </View>
@@ -380,64 +370,98 @@ const styles = StyleSheet.create({
     position: 'relative',
     overflow: 'hidden',
   },
-  horizontalLine: {
+  courtLineLayer: {
+    ...StyleSheet.absoluteFillObject,
+    zIndex: 2,
+  },
+  courtOutline: {
     position: 'absolute',
-    left: '8%',
-    right: '8%',
-    height: 3,
+    top: '6%',
+    bottom: '6%',
+    left: '6%',
+    right: '6%',
+    borderWidth: 2,
+    borderRadius: 20,
   },
-  topServiceLine: {
-    top: '26%',
-  },
-  bottomServiceLine: {
-    bottom: '26%',
-  },
-  verticalLine: {
+  netLine: {
     position: 'absolute',
-    top: '16%',
-    bottom: '16%',
+    left: '6%',
+    right: '6%',
+    top: '50%',
+    height: 4,
+  },
+  midCourtLine: {
+    position: 'absolute',
+    top: '6%',
+    bottom: '6%',
+    left: '50%',
     width: 3,
   },
-  leftServiceLine: {
-    left: '28%',
+  serviceLineTop: {
+    position: 'absolute',
+    left: '6%',
+    right: '6%',
+    top: '28%',
+    height: 3,
   },
-  rightServiceLine: {
-    right: '28%',
+  serviceLineBottom: {
+    position: 'absolute',
+    left: '6%',
+    right: '6%',
+    bottom: '28%',
+    height: 3,
   },
-  singlesLine: {
-    top: '8%',
-    bottom: '8%',
+  singlesBoundaryLeft: {
+    position: 'absolute',
+    top: '6%',
+    bottom: '6%',
+    left: '22%',
     width: 2,
   },
-  singlesLeft: {
-    left: '18%',
-  },
-  singlesRight: {
-    right: '18%',
-  },
-  centerLine: {
+  singlesBoundaryRight: {
     position: 'absolute',
-    top: '8%',
-    bottom: '8%',
-    left: '50%',
-    borderLeftWidth: 3,
-    borderStyle: 'dashed',
+    top: '6%',
+    bottom: '6%',
+    right: '22%',
+    width: 2,
   },
-  sideContainer: {
+  playerZone: {
     position: 'absolute',
-    width: '40%',
-    top: '12%',
-    bottom: '12%',
     padding: 16,
     borderRadius: 18,
     borderWidth: 1,
     justifyContent: 'center',
+    zIndex: 1,
   },
-  sideAContainer: {
-    left: '6%',
+  playerZoneTopLeft: {
+    top: '10%',
+    left: '8%',
+    width: '38%',
   },
-  sideBContainer: {
-    right: '6%',
+  playerZoneTopRight: {
+    top: '10%',
+    right: '8%',
+    width: '38%',
+  },
+  playerZoneBottomLeft: {
+    bottom: '10%',
+    left: '8%',
+    width: '38%',
+  },
+  playerZoneBottomRight: {
+    bottom: '10%',
+    right: '8%',
+    width: '38%',
+  },
+  playerZoneTopCenter: {
+    top: '12%',
+    left: '14%',
+    right: '14%',
+  },
+  playerZoneBottomCenter: {
+    bottom: '12%',
+    left: '14%',
+    right: '14%',
   },
   sideLabel: {
     fontSize: 18,
@@ -445,12 +469,6 @@ const styles = StyleSheet.create({
     textAlign: 'center',
     letterSpacing: 1.2,
     marginBottom: 12,
-  },
-  inputSlot: {
-    marginBottom: 14,
-  },
-  inputSlotLast: {
-    marginBottom: 0,
   },
   inputLabel: {
     textTransform: 'uppercase',
