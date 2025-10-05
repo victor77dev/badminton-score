@@ -21,6 +21,19 @@ export type ScoreboardTeam = {
   playerLabel: string;
 };
 
+export type CompletedGame = {
+  gameNumber: number;
+  scores: Record<TeamId, number>;
+  winner: TeamId;
+};
+
+export type ScoreboardSetScore = {
+  gameNumber: number;
+  scores: Record<TeamId, number>;
+  isComplete: boolean;
+  isCurrent: boolean;
+};
+
 export type ScoreboardViewModel = {
   matchInProgress: boolean;
   matchTitle: string;
@@ -30,6 +43,7 @@ export type ScoreboardViewModel = {
   venueName?: string;
   canUndo: boolean;
   teams: ScoreboardTeam[];
+  setScores: ScoreboardSetScore[];
 };
 
 export type ScoreSnapshot = {
@@ -40,6 +54,7 @@ export type ScoreSnapshot = {
   status: MatchStatus;
   courtOrder: CourtOrder;
   hasSwitchedMidGame: boolean;
+  completedGames: CompletedGame[];
 };
 
 export type PlayerNameEntries = Record<TeamId, [string, string]>;
@@ -59,6 +74,7 @@ export type MatchState = {
   hasSwitchedMidGame: boolean;
   teams: Record<TeamId, TeamState>;
   history: ScoreSnapshot[];
+  completedGames: CompletedGame[];
 };
 
 export type StartMatchPayload = {
@@ -91,6 +107,7 @@ const initialState: MatchState = {
     sideB: defaultTeamState('sideB', 'Side B'),
   },
   history: [],
+  completedGames: [],
 };
 
 const sanitizeNames = (names: [string, string]) =>
@@ -125,6 +142,7 @@ const matchSlice = createSlice({
       state.servingTeam = state.courtOrder[0];
       state.hasSwitchedMidGame = false;
       state.history = [];
+      state.completedGames = [];
       state.teams.sideA = {
         id: 'sideA',
         label: 'Side A',
@@ -159,6 +177,14 @@ const matchSlice = createSlice({
         status: state.status,
         courtOrder: [state.courtOrder[0], state.courtOrder[1]] as CourtOrder,
         hasSwitchedMidGame: state.hasSwitchedMidGame,
+        completedGames: state.completedGames.map((game) => ({
+          gameNumber: game.gameNumber,
+          scores: {
+            sideA: game.scores.sideA,
+            sideB: game.scores.sideB,
+          },
+          winner: game.winner,
+        })),
       };
 
       state.history.push(snapshot);
@@ -191,6 +217,15 @@ const matchSlice = createSlice({
 
       if (gameWon) {
         state.gamesWon[teamId] += 1;
+
+        state.completedGames.push({
+          gameNumber: state.currentGame,
+          scores: {
+            sideA: updatedScores.sideA,
+            sideB: updatedScores.sideB,
+          },
+          winner: teamId,
+        });
 
         const gamesNeededToWin = Math.floor(state.totalGames / 2) + 1;
         const matchWon = state.gamesWon[teamId] >= gamesNeededToWin;
@@ -231,6 +266,14 @@ const matchSlice = createSlice({
       state.status = previousSnapshot.status;
       state.courtOrder = previousSnapshot.courtOrder;
       state.hasSwitchedMidGame = previousSnapshot.hasSwitchedMidGame;
+      state.completedGames = previousSnapshot.completedGames.map((game) => ({
+        gameNumber: game.gameNumber,
+        scores: {
+          sideA: game.scores.sideA,
+          sideB: game.scores.sideB,
+        },
+        winner: game.winner,
+      }));
     },
   },
 });
@@ -250,21 +293,60 @@ export const selectOrderedTeams = createSelector(selectMatch, (match) =>
   (['sideA', 'sideB'] as TeamId[]).map((id) => match.teams[id]),
 );
 
-const selectScoreboardTeams = createSelector(
-  [selectOrderedTeams, selectMatch],
-  (teams, match): ScoreboardTeam[] =>
-    teams.map((team) => ({
-      id: team.id,
-      label: team.label,
-      score: team.score,
-      isServing: match.servingTeam === team.id,
-      playerLabel: team.players.length > 0 ? team.players.join(' & ') : 'Ready to Play',
-    })),
+const selectScoreboardTeams = createSelector([selectOrderedTeams, selectMatch], (teams, match): ScoreboardTeam[] =>
+  teams.map((team) => ({
+    id: team.id,
+    label: team.label,
+    score: team.score,
+    isServing: match.servingTeam === team.id,
+    playerLabel: team.players.length > 0 ? team.players.join(' & ') : 'Ready to Play',
+  })),
 );
 
+const selectScoreboardSetScores = createSelector(selectMatch, (match): ScoreboardSetScore[] => {
+  const completedByGame = new Map(match.completedGames.map((game) => [game.gameNumber, game]));
+  const setScores: ScoreboardSetScore[] = [];
+
+  for (let gameNumber = 1; gameNumber <= match.totalGames; gameNumber += 1) {
+    const completed = completedByGame.get(gameNumber);
+
+    if (completed) {
+      setScores.push({
+        gameNumber,
+        scores: {
+          sideA: completed.scores.sideA,
+          sideB: completed.scores.sideB,
+        },
+        isComplete: true,
+        isCurrent: false,
+      });
+      continue;
+    }
+
+    const isCurrent = match.status !== 'completed' && gameNumber === match.currentGame;
+
+    setScores.push({
+      gameNumber,
+      scores: isCurrent
+        ? {
+            sideA: match.teams.sideA.score,
+            sideB: match.teams.sideB.score,
+          }
+        : {
+            sideA: 0,
+            sideB: 0,
+          },
+      isComplete: false,
+      isCurrent,
+    });
+  }
+
+  return setScores;
+});
+
 export const selectScoreboardViewModel = createSelector(
-  [selectMatch, selectScoreboardTeams],
-  (match, teams): ScoreboardViewModel => ({
+  [selectMatch, selectScoreboardTeams, selectScoreboardSetScores],
+  (match, teams, setScores): ScoreboardViewModel => ({
     matchInProgress: match.status === 'in-progress',
     matchTitle: match.matchTitle,
     matchTypeLabel: match.matchType === 'singles' ? 'Singles' : 'Doubles',
@@ -273,6 +355,7 @@ export const selectScoreboardViewModel = createSelector(
     venueName: match.venueName,
     canUndo: match.history.length > 0,
     teams,
+    setScores,
   }),
 );
 

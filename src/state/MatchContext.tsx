@@ -22,6 +22,13 @@ type ScoreSnapshot = {
   status: MatchStatus;
   courtOrder: CourtOrder;
   hasSwitchedMidGame: boolean;
+  completedGames: CompletedGame[];
+};
+
+type CompletedGame = {
+  gameNumber: number;
+  scores: Record<TeamId, number>;
+  winner: TeamId;
 };
 
 type MatchState = {
@@ -37,6 +44,7 @@ type MatchState = {
   hasSwitchedMidGame: boolean;
   teams: Record<TeamId, TeamState>;
   history: ScoreSnapshot[];
+  completedGames: CompletedGame[];
 };
 
 type PlayerNameEntries = Record<TeamId, [string, string]>;
@@ -78,6 +86,7 @@ const initialState: MatchState = {
     sideB: defaultTeamState('sideB', 'Side B'),
   },
   history: [],
+  completedGames: [],
 };
 
 const MatchContext = createContext<MatchContextValue | undefined>(undefined);
@@ -127,6 +136,7 @@ export function MatchProvider({ children }: { children: ReactNode }) {
         },
       },
       history: [],
+      completedGames: [],
     });
   }, []);
 
@@ -150,6 +160,14 @@ export function MatchProvider({ children }: { children: ReactNode }) {
         status: current.status,
         courtOrder: [...current.courtOrder],
         hasSwitchedMidGame: current.hasSwitchedMidGame,
+        completedGames: current.completedGames.map((game) => ({
+          gameNumber: game.gameNumber,
+          scores: {
+            sideA: game.scores.sideA,
+            sideB: game.scores.sideB,
+          },
+          winner: game.winner,
+        })),
       };
 
       const opponentId: TeamId = teamId === 'sideA' ? 'sideB' : 'sideA';
@@ -183,6 +201,7 @@ export function MatchProvider({ children }: { children: ReactNode }) {
       let gamesWon = { ...current.gamesWon };
       let servingTeam: TeamId = teamId;
       let status: MatchState['status'] = current.status;
+      let completedGames = current.completedGames;
       let teams: Record<TeamId, TeamState> = {
         sideA: {
           ...current.teams.sideA,
@@ -199,6 +218,18 @@ export function MatchProvider({ children }: { children: ReactNode }) {
           ...gamesWon,
           [teamId]: gamesWon[teamId] + 1,
         };
+
+        completedGames = [
+          ...completedGames,
+          {
+            gameNumber: current.currentGame,
+            scores: {
+              sideA: updatedScores.sideA,
+              sideB: updatedScores.sideB,
+            },
+            winner: teamId,
+          },
+        ];
 
         const gamesNeededToWin = Math.floor(current.totalGames / 2) + 1;
         const matchWon = gamesWon[teamId] >= gamesNeededToWin;
@@ -233,6 +264,7 @@ export function MatchProvider({ children }: { children: ReactNode }) {
         courtOrder: nextCourtOrder,
         hasSwitchedMidGame,
         history: [...current.history, snapshot],
+        completedGames,
       };
     });
   }, []);
@@ -268,6 +300,14 @@ export function MatchProvider({ children }: { children: ReactNode }) {
         courtOrder: previousSnapshot.courtOrder,
         hasSwitchedMidGame: previousSnapshot.hasSwitchedMidGame,
         history: nextHistory,
+        completedGames: previousSnapshot.completedGames.map((game) => ({
+          gameNumber: game.gameNumber,
+          scores: {
+            sideA: game.scores.sideA,
+            sideB: game.scores.sideB,
+          },
+          winner: game.winner,
+        })),
       };
     });
   }, []);
