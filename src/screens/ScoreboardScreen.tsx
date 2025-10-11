@@ -1,6 +1,7 @@
-import { useEffect, useCallback } from 'react';
+import { useEffect, useCallback, Fragment } from 'react';
 import { StyleSheet, View } from 'react-native';
 import { useRouter } from 'expo-router';
+import Svg, { Circle, Line, Polyline, Text as SvgText } from 'react-native-svg';
 
 import {
   PrimaryButton,
@@ -125,7 +126,9 @@ type SetScoresGraphProps = {
   mutedColor: string;
 };
 
-const BAR_MAX_HEIGHT = 140;
+const CHART_HEIGHT = 160;
+const HORIZONTAL_STEP = 80;
+const PADDING = { top: 16, right: 32, bottom: 40, left: 44 };
 
 function SetScoresGraph({ setScores, teams, colorScheme, trackColor, mutedColor }: SetScoresGraphProps) {
   const teamColors: Record<TeamId, string> =
@@ -138,50 +141,157 @@ function SetScoresGraph({ setScores, teams, colorScheme, trackColor, mutedColor 
     ...setScores.map((set) => Math.max(set.scores.sideA, set.scores.sideB)),
   );
 
+  const setCount = setScores.length;
+  const chartWidth = Math.max(1, setCount - 1) * HORIZONTAL_STEP;
+  const viewBoxWidth = PADDING.left + chartWidth + PADDING.right;
+  const viewBoxHeight = PADDING.top + CHART_HEIGHT + PADDING.bottom;
+  const chartLeft = PADDING.left;
+  const chartRight = viewBoxWidth - PADDING.right;
+  const chartTop = PADDING.top;
+  const chartBottom = PADDING.top + CHART_HEIGHT;
+  const xStep = setCount > 1 ? (chartRight - chartLeft) / (setCount - 1) : 0;
+
+  const xForIndex = (index: number) =>
+    setCount > 1 ? chartLeft + index * xStep : (chartLeft + chartRight) / 2;
+
+  const yForScore = (score: number) =>
+    chartBottom - (score / maxScore) * CHART_HEIGHT;
+
+  const yTickStep = Math.max(1, Math.ceil(maxScore / 4));
+  const yTicks: number[] = [];
+  for (let value = 0; value <= maxScore; value += yTickStep) {
+    yTicks.push(value);
+  }
+  if (yTicks[yTicks.length - 1] !== maxScore) {
+    yTicks.push(maxScore);
+  }
+
+  const teamPointMap = teams.reduce(
+    (acc, team) => {
+      acc[team.id] = setScores.map((set, index) => ({
+        x: xForIndex(index),
+        y: yForScore(set.scores[team.id]),
+        set,
+      }));
+      return acc;
+    },
+    {} as Record<TeamId, { x: number; y: number; set: ScoreboardSetScore }[]>,
+  );
+
   return (
-    <View style={styles.graphContainer}>
-      {setScores.map((set) => (
-        <View key={set.gameNumber} style={styles.setColumn}>
-          <ThemedText type="defaultSemiBold" style={styles.setLabel}>
-            Set {set.gameNumber}
-          </ThemedText>
-
-          <View style={styles.barGroup}>
-            {teams.map((team) => {
-              const score = set.scores[team.id];
-              const height = (score / maxScore) * BAR_MAX_HEIGHT;
-              const opacity = set.isComplete || set.isCurrent ? 1 : 0.35;
-
-              return (
-                <View key={team.id} style={styles.barColumn}>
-                  <View style={[styles.barTrack, { backgroundColor: trackColor }]}>
-                    <View
-                      style={[
-                        styles.barFill,
-                        {
-                          height,
-                          backgroundColor: teamColors[team.id],
-                          opacity,
-                        },
-                      ]}
-                    />
-                  </View>
-                  <ThemedText type="defaultSemiBold" style={styles.barScore}>
-                    {score}
-                  </ThemedText>
-                  <ThemedText type="default" style={[styles.barTeamLabel, { color: mutedColor }]}>
-                    {team.label}
-                  </ThemedText>
-                </View>
-              );
-            })}
+    <View style={styles.graphWrapper}>
+      <View style={styles.legendRow}>
+        {teams.map((team) => (
+          <View key={team.id} style={styles.legendItem}>
+            <View style={[styles.legendSwatch, { backgroundColor: teamColors[team.id] }]} />
+            <ThemedText type="default" style={[styles.legendLabel, { color: mutedColor }]}>
+              {team.label}
+            </ThemedText>
           </View>
+        ))}
+      </View>
 
-          <ThemedText type="default" style={[styles.setStatus, { color: mutedColor }]}>
-            {set.isComplete ? 'Completed' : set.isCurrent ? 'In Progress' : 'Pending'}
-          </ThemedText>
-        </View>
-      ))}
+      <View style={styles.svgWrapper}>
+        <Svg
+          width="100%"
+          height={viewBoxHeight}
+          viewBox={`0 0 ${viewBoxWidth} ${viewBoxHeight}`}
+        >
+          <Line x1={chartLeft} y1={chartTop} x2={chartLeft} y2={chartBottom} stroke={trackColor} strokeWidth={1} />
+          <Line x1={chartLeft} y1={chartBottom} x2={chartRight} y2={chartBottom} stroke={trackColor} strokeWidth={1} />
+
+          {yTicks.map((tick) => {
+            const y = yForScore(tick);
+            const isBaseLine = tick === 0;
+
+            return (
+              <Fragment key={`tick-${tick}`}>
+                <Line
+                  x1={chartLeft}
+                  y1={y}
+                  x2={chartRight}
+                  y2={y}
+                  stroke={trackColor}
+                  strokeWidth={1}
+                  opacity={isBaseLine ? 1 : 0.35}
+                />
+                <SvgText
+                  x={chartLeft - 8}
+                  y={y + 4}
+                  fontSize={12}
+                  fill={mutedColor}
+                  textAnchor="end"
+                >
+                  {tick}
+                </SvgText>
+              </Fragment>
+            );
+          })}
+
+          {setScores.map((set, index) => {
+            const x = xForIndex(index);
+            const statusLabel = set.isComplete
+              ? 'Completed'
+              : set.isCurrent
+                ? 'In Progress'
+                : 'Pending';
+
+            return (
+              <Fragment key={`labels-${set.gameNumber}`}>
+                <SvgText
+                  x={x}
+                  y={chartBottom + 18}
+                  fontSize={12}
+                  fill={mutedColor}
+                  textAnchor="middle"
+                >
+                  Set {set.gameNumber}
+                </SvgText>
+                <SvgText
+                  x={x}
+                  y={chartBottom + 34}
+                  fontSize={11}
+                  fill={mutedColor}
+                  textAnchor="middle"
+                >
+                  {statusLabel}
+                </SvgText>
+              </Fragment>
+            );
+          })}
+
+          {teams.map((team) => {
+            const points = teamPointMap[team.id];
+
+            return (
+              <Fragment key={`series-${team.id}`}>
+                {points.length > 1 && (
+                  <Polyline
+                    points={points.map((point) => `${point.x},${point.y}`).join(' ')}
+                    fill="none"
+                    stroke={teamColors[team.id]}
+                    strokeWidth={2.5}
+                    strokeLinejoin="round"
+                    strokeLinecap="round"
+                  />
+                )}
+                {points.map((point) => (
+                  <Circle
+                    key={`point-${team.id}-${point.set.gameNumber}`}
+                    cx={point.x}
+                    cy={point.y}
+                    r={6}
+                    stroke={colorScheme === 'light' ? '#ffffff' : '#020617'}
+                    strokeWidth={2}
+                    fill={teamColors[team.id]}
+                    opacity={point.set.isComplete || point.set.isCurrent ? 1 : 0.4}
+                  />
+                ))}
+              </Fragment>
+            );
+          })}
+        </Svg>
+      </View>
     </View>
   );
 }
@@ -246,50 +356,28 @@ const styles = StyleSheet.create({
   setsDescription: {
     color: '#64748b',
   },
-  graphContainer: {
-    flexDirection: 'row',
-    justifyContent: 'space-between',
+  graphWrapper: {
     gap: 16,
   },
-  setColumn: {
-    flex: 1,
-    alignItems: 'center',
-    gap: 12,
-  },
-  setLabel: {
-    textTransform: 'uppercase',
-    letterSpacing: 0.8,
-  },
-  barGroup: {
+  legendRow: {
     flexDirection: 'row',
     gap: 16,
-    alignItems: 'flex-end',
+    flexWrap: 'wrap',
   },
-  barColumn: {
+  legendItem: {
+    flexDirection: 'row',
     alignItems: 'center',
     gap: 8,
   },
-  barTrack: {
-    width: 28,
-    height: BAR_MAX_HEIGHT,
-    borderRadius: 18,
-    overflow: 'hidden',
-    justifyContent: 'flex-end',
+  legendSwatch: {
+    width: 12,
+    height: 12,
+    borderRadius: 6,
   },
-  barFill: {
+  legendLabel: {
+    fontSize: 14,
+  },
+  svgWrapper: {
     width: '100%',
-    borderRadius: 18,
-  },
-  barScore: {
-    fontSize: 16,
-  },
-  barTeamLabel: {
-    fontSize: 12,
-    textAlign: 'center',
-    color: '#64748b',
-  },
-  setStatus: {
-    fontSize: 12,
-    color: '#64748b',
   },
 });
