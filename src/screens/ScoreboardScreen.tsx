@@ -1,6 +1,6 @@
-import { useEffect, useCallback, Fragment } from 'react';
-import { StyleSheet, View } from 'react-native';
-import { useRouter } from 'expo-router';
+import { Fragment, useCallback } from 'react';
+import { ScrollView, StyleSheet, View } from 'react-native';
+import { Redirect, useRootNavigationState } from 'expo-router';
 import Svg, { Circle, Line, Polyline, Text as SvgText } from 'react-native-svg';
 
 import {
@@ -13,15 +13,23 @@ import { ThemedText } from '#/components/themed-text';
 import { ThemedView } from '#/components/themed-view';
 import { useColorScheme } from '#/hooks/use-color-scheme';
 import { useAppDispatch, useAppSelector } from '#/redux/hooks';
-import { addPoint, selectScoreboardViewModel, undoLastPoint } from '#/redux/matchSlice';
+import {
+  addPoint,
+  selectScoreboardViewModel,
+  undoLastPoint,
+} from '#/redux/matchSlice';
 import type {
   ScoreboardSetProgression,
   ScoreboardTeam,
 } from '#/redux/matchSlice';
 import type { TeamId } from '#/types/match';
 
+const CHART_HEIGHT = 184;
+const HORIZONTAL_STEP = 36;
+const PADDING = { top: 20, right: 28, bottom: 44, left: 44 };
+
 export default function ScoreboardScreen() {
-  const router = useRouter();
+  const navigationState = useRootNavigationState();
   const dispatch = useAppDispatch();
   const {
     matchInProgress,
@@ -40,12 +48,6 @@ export default function ScoreboardScreen() {
   const trackColor = colorScheme === 'light' ? '#e2e8f0' : '#1f2937';
   const mutedColor = colorScheme === 'light' ? '#64748b' : '#94a3b8';
 
-  useEffect(() => {
-    if (!matchInProgress) {
-      router.replace('/');
-    }
-  }, [matchInProgress, router]);
-
   const handleAddPoint = useCallback(
     (teamId: TeamId) => {
       dispatch(addPoint(teamId));
@@ -57,12 +59,20 @@ export default function ScoreboardScreen() {
     dispatch(undoLastPoint());
   }, [dispatch]);
 
-  if (!matchInProgress) {
+  if (!navigationState?.key) {
     return null;
   }
 
+  if (!matchInProgress) {
+    return <Redirect href="/" />;
+  }
+
   return (
-    <ThemedView style={styles.container}>
+    <ThemedView style={styles.screen}>
+      <ScrollView
+        contentContainerStyle={styles.container}
+        showsVerticalScrollIndicator={false}
+      >
       <TopBar
         matchTitle={matchTitle}
         matchType={matchTypeLabel}
@@ -117,6 +127,7 @@ export default function ScoreboardScreen() {
           trackColor={trackColor}
         />
       </View>
+      </ScrollView>
     </ThemedView>
   );
 }
@@ -129,10 +140,6 @@ type SetScoresGraphProps = {
   mutedColor: string;
 };
 
-const CHART_HEIGHT = 184;
-const HORIZONTAL_STEP = 36;
-const PADDING = { top: 20, right: 28, bottom: 44, left: 44 };
-
 function SetScoresGraph({
   setProgressions,
   teams,
@@ -144,6 +151,26 @@ function SetScoresGraph({
     colorScheme === 'light'
       ? { sideA: '#ef4444', sideB: '#0f172a' }
       : { sideA: '#f87171', sideB: '#e2e8f0' };
+
+  if (setProgressions.length === 0) {
+    return (
+      <View style={styles.graphWrapper}>
+        <View style={styles.legendRow}>
+          {teams.map((team) => (
+            <View key={team.id} style={styles.legendItem}>
+              <View style={[styles.legendSwatch, { backgroundColor: teamColors[team.id] }]} />
+              <ThemedText type="default" style={[styles.legendLabel, { color: mutedColor }]}>
+                {team.label}
+              </ThemedText>
+            </View>
+          ))}
+        </View>
+        <ThemedText type="default" style={[styles.setsDescription, { color: mutedColor }]}>
+          Match data will appear here once a set begins.
+        </ThemedText>
+      </View>
+    );
+  }
 
   return (
     <View style={styles.graphWrapper}>
@@ -200,15 +227,19 @@ function SetLineChart({
   mutedColor,
   colorScheme,
 }: SetLineChartProps) {
-  const points = progression.points;
+  const points =
+    progression.points.length > 0
+      ? progression.points
+      : [{ rally: 0, scores: { sideA: 0, sideB: 0 } }];
+
   const maxScore = Math.max(
     1,
     ...points.map((point) => Math.max(point.scores.sideA, point.scores.sideB)),
   );
-  const lastRally = points.length > 0 ? points[points.length - 1].rally : 0;
+  const lastRally = points[points.length - 1]?.rally ?? 0;
   const domainMaxRally = Math.max(1, lastRally);
 
-  const chartWidth = Math.max(1, domainMaxRally) * HORIZONTAL_STEP;
+  const chartWidth = domainMaxRally * HORIZONTAL_STEP;
   const viewBoxWidth = PADDING.left + chartWidth + PADDING.right;
   const viewBoxHeight = PADDING.top + CHART_HEIGHT + PADDING.bottom;
   const chartLeft = PADDING.left;
@@ -369,6 +400,9 @@ function SetLineChart({
 }
 
 const styles = StyleSheet.create({
+  screen: {
+    flex: 1,
+  },
   container: {
     flex: 1,
     padding: 24,
