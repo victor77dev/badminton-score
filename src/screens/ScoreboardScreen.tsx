@@ -69,64 +69,61 @@ export default function ScoreboardScreen() {
 
   return (
     <ThemedView style={styles.screen}>
-      <ScrollView
-        contentContainerStyle={styles.container}
-        showsVerticalScrollIndicator={false}
-      >
-      <TopBar
-        matchTitle={matchTitle}
-        matchType={matchTypeLabel}
-        currentGame={currentGame}
-        totalGames={totalGames}
-        venueName={venueName}
-      />
+      <ScrollView contentContainerStyle={styles.container} showsVerticalScrollIndicator={false}>
+        <TopBar
+          matchTitle={matchTitle}
+          matchType={matchTypeLabel}
+          currentGame={currentGame}
+          totalGames={totalGames}
+          venueName={venueName}
+        />
 
-      <View style={[styles.scoreboardCard, { backgroundColor: cardBackground }]}>
-        <View style={styles.scoreRow}>
-          {teams.map((team) => (
-            <View key={team.id} style={styles.teamColumn}>
-              <View style={styles.teamHeader}>
-                <ThemedText type="subtitle" style={styles.teamLabel}>
-                  {team.label}
-                </ThemedText>
-                <View style={styles.serveRow}>
-                  <ServeIndicator active={team.isServing} />
-                  <ThemedText type="default" style={styles.serveText}>
-                    {team.isServing ? 'Serving' : 'Receiving'}
+        <View style={[styles.scoreboardCard, { backgroundColor: cardBackground }]}>
+          <View style={styles.scoreRow}>
+            {teams.map((team) => (
+              <View key={team.id} style={styles.teamColumn}>
+                <View style={styles.teamHeader}>
+                  <ThemedText type="subtitle" style={styles.teamLabel}>
+                    {team.label}
                   </ThemedText>
+                  <View style={styles.serveRow}>
+                    <ServeIndicator active={team.isServing} />
+                    <ThemedText type="default" style={styles.serveText}>
+                      {team.isServing ? 'Serving' : 'Receiving'}
+                    </ThemedText>
+                  </View>
+                </View>
+                <ScoreBox playerName={team.playerLabel} score={team.score} highlight={team.isServing} />
+                <View style={styles.pointButtonWrapper}>
+                  <PrimaryButton label="+1 Point" onPress={() => handleAddPoint(team.id)} />
                 </View>
               </View>
-              <ScoreBox playerName={team.playerLabel} score={team.score} highlight={team.isServing} />
-              <View style={styles.pointButtonWrapper}>
-                <PrimaryButton label="+1 Point" onPress={() => handleAddPoint(team.id)} />
-              </View>
-            </View>
-          ))}
+            ))}
+          </View>
+
+          <View style={[styles.divider, { backgroundColor: dividerColor }]} />
+
+          <View style={styles.undoWrapper}>
+            <PrimaryButton label="Undo" disabled={!canUndo} onPress={handleUndo} />
+          </View>
         </View>
 
-        <View style={[styles.divider, { backgroundColor: dividerColor }]} />
+        <View style={[styles.setsCard, { backgroundColor: cardBackground }]}>
+          <View style={styles.setsHeader}>
+            <ThemedText type="subtitle">Set Scores</ThemedText>
+            <ThemedText type="default" style={[styles.setsDescription, { color: mutedColor }]}>
+              Compare how each side performed in every set throughout the match.
+            </ThemedText>
+          </View>
 
-        <View style={styles.undoWrapper}>
-          <PrimaryButton label="Undo" disabled={!canUndo} onPress={handleUndo} />
+          <SetScoresGraph
+            colorScheme={colorScheme}
+            mutedColor={mutedColor}
+            setProgressions={setProgressions}
+            teams={teams}
+            trackColor={trackColor}
+          />
         </View>
-      </View>
-
-      <View style={[styles.setsCard, { backgroundColor: cardBackground }]}>
-        <View style={styles.setsHeader}>
-          <ThemedText type="subtitle">Set Scores</ThemedText>
-          <ThemedText type="default" style={[styles.setsDescription, { color: mutedColor }]}>
-            Compare how each side performed in every set throughout the match.
-          </ThemedText>
-        </View>
-
-        <SetScoresGraph
-          colorScheme={colorScheme}
-          mutedColor={mutedColor}
-          setProgressions={setProgressions}
-          teams={teams}
-          trackColor={trackColor}
-        />
-      </View>
       </ScrollView>
     </ThemedView>
   );
@@ -404,7 +401,7 @@ const styles = StyleSheet.create({
     flex: 1,
   },
   container: {
-    flex: 1,
+    flexGrow: 1,
     padding: 24,
     gap: 24,
   },
