@@ -12,5 +12,8 @@ module.exports = defineConfig([
       '.expo-shared/**',
       'web-build/**',
     ],
+    settings: {
+      'import/core-modules': ['react-native-svg'],
+    },
   },
 ]);

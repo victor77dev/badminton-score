@@ -27,9 +27,14 @@ export type CompletedGame = {
   winner: TeamId;
 };
 
-export type ScoreboardSetScore = {
-  gameNumber: number;
+export type ScoreboardSetProgressionPoint = {
+  rally: number;
   scores: Record<TeamId, number>;
+};
+
+export type ScoreboardSetProgression = {
+  gameNumber: number;
+  points: ScoreboardSetProgressionPoint[];
   isComplete: boolean;
   isCurrent: boolean;
 };
@@ -43,7 +48,7 @@ export type ScoreboardViewModel = {
   venueName?: string;
   canUndo: boolean;
   teams: ScoreboardTeam[];
-  setScores: ScoreboardSetScore[];
+  setProgressions: ScoreboardSetProgression[];
 };
 
 export type ScoreSnapshot = {
@@ -303,50 +308,168 @@ const selectScoreboardTeams = createSelector([selectOrderedTeams, selectMatch], 
   })),
 );
 
-const selectScoreboardSetScores = createSelector(selectMatch, (match): ScoreboardSetScore[] => {
-  const completedByGame = new Map(match.completedGames.map((game) => [game.gameNumber, game]));
-  const setScores: ScoreboardSetScore[] = [];
+const selectScoreboardSetProgressions = createSelector(
+  selectMatch,
+  (match): ScoreboardSetProgression[] => {
+    const completedByGame = new Map(match.completedGames.map((game) => [game.gameNumber, game]));
+    const progressions = new Map<number, ScoreboardSetProgression>();
 
-  for (let gameNumber = 1; gameNumber <= match.totalGames; gameNumber += 1) {
-    const completed = completedByGame.get(gameNumber);
+    const ensureProgression = (
+      gameNumber: number,
+      baseline: Record<TeamId, number>,
+    ): ScoreboardSetProgression => {
+      if (!progressions.has(gameNumber)) {
+        progressions.set(gameNumber, {
+          gameNumber,
+          points: [
+            {
+              rally: 0,
+              scores: {
+                sideA: baseline.sideA,
+                sideB: baseline.sideB,
+              },
+            },
+          ],
+          isComplete: false,
+          isCurrent: false,
+        });
+      }
 
-    if (completed) {
-      setScores.push({
-        gameNumber,
-        scores: {
-          sideA: completed.scores.sideA,
-          sideB: completed.scores.sideB,
-        },
-        isComplete: true,
-        isCurrent: false,
-      });
-      continue;
-    }
+      return progressions.get(gameNumber)!;
+    };
 
-    const isCurrent = match.status !== 'completed' && gameNumber === match.currentGame;
+    for (let index = 0; index < match.history.length; index += 1) {
+      const snapshot = match.history[index];
+      const gameNumber = snapshot.currentGame;
+      const nextSnapshot = match.history[index + 1];
+      const progression = ensureProgression(gameNumber, snapshot.scores);
 
-    setScores.push({
-      gameNumber,
-      scores: isCurrent
-        ? {
+      const nextRally = progression.points.length;
+
+      let afterScores: Record<TeamId, number> | undefined;
+
+      if (nextSnapshot && nextSnapshot.currentGame === gameNumber) {
+        afterScores = nextSnapshot.scores;
+      } else {
+        const completed = completedByGame.get(gameNumber);
+
+        if (completed) {
+          afterScores = completed.scores;
+        } else if (!nextSnapshot && match.currentGame === gameNumber && match.status !== 'completed') {
+          afterScores = {
             sideA: match.teams.sideA.score,
             sideB: match.teams.sideB.score,
-          }
-        : {
-            sideA: 0,
-            sideB: 0,
-          },
-      isComplete: false,
-      isCurrent,
-    });
-  }
+          };
+        } else {
+          afterScores = {
+            sideA: snapshot.scores.sideA,
+            sideB: snapshot.scores.sideB,
+          };
+        }
+      }
 
-  return setScores;
-});
+      progression.points.push({
+        rally: nextRally,
+        scores: {
+          sideA: afterScores.sideA,
+          sideB: afterScores.sideB,
+        },
+      });
+    }
+
+    for (let gameNumber = 1; gameNumber <= match.totalGames; gameNumber += 1) {
+      const completed = completedByGame.get(gameNumber);
+      const isCurrent =
+        !completed && match.status !== 'completed' && match.currentGame === gameNumber;
+      const progression = progressions.get(gameNumber);
+
+      if (progression) {
+        const points = progression.points;
+
+        if (points.length === 0) {
+          points.push({
+            rally: 0,
+            scores: { sideA: 0, sideB: 0 },
+          });
+        }
+
+        if (completed) {
+          const last = points[points.length - 1];
+          if (
+            last.scores.sideA !== completed.scores.sideA ||
+            last.scores.sideB !== completed.scores.sideB
+          ) {
+            points.push({
+              rally: points.length,
+              scores: {
+                sideA: completed.scores.sideA,
+                sideB: completed.scores.sideB,
+              },
+            });
+          }
+        } else if (isCurrent) {
+          const currentScores = {
+            sideA: match.teams.sideA.score,
+            sideB: match.teams.sideB.score,
+          };
+          const last = points[points.length - 1];
+
+          if (
+            last.scores.sideA !== currentScores.sideA ||
+            last.scores.sideB !== currentScores.sideB
+          ) {
+            points.push({
+              rally: points.length,
+              scores: currentScores,
+            });
+          }
+        }
+
+        progression.isComplete = Boolean(completed);
+        progression.isCurrent = isCurrent;
+      } else {
+        const points: ScoreboardSetProgressionPoint[] = [
+          { rally: 0, scores: { sideA: 0, sideB: 0 } },
+        ];
+
+        if (completed) {
+          points.push({
+            rally: 1,
+            scores: {
+              sideA: completed.scores.sideA,
+              sideB: completed.scores.sideB,
+            },
+          });
+        } else if (isCurrent) {
+          const currentScores = {
+            sideA: match.teams.sideA.score,
+            sideB: match.teams.sideB.score,
+          };
+
+          if (currentScores.sideA !== 0 || currentScores.sideB !== 0) {
+            points.push({
+              rally: 1,
+              scores: currentScores,
+            });
+          }
+        }
+
+        progressions.set(gameNumber, {
+          gameNumber,
+          points,
+          isComplete: Boolean(completed),
+          isCurrent,
+        });
+      }
+    }
+
+    return Array.from(progressions.values()).sort((a, b) => a.gameNumber - b.gameNumber);
+  },
+);
 
 export const selectScoreboardViewModel = createSelector(
-  [selectMatch, selectScoreboardTeams, selectScoreboardSetScores],
-  (match, teams, setScores): ScoreboardViewModel => ({
+  [selectMatch, selectScoreboardTeams, selectScoreboardSetProgressions],
+  (match, teams, setProgressions): ScoreboardViewModel => ({
     matchInProgress: match.status === 'in-progress',
     matchTitle: match.matchTitle,
     matchTypeLabel: match.matchType === 'singles' ? 'Singles' : 'Doubles',
@@ -355,7 +478,7 @@ export const selectScoreboardViewModel = createSelector(
     venueName: match.venueName,
     canUndo: match.history.length > 0,
     teams,
-    setScores,
+    setProgressions,
   }),
 );
 

@@ -1,6 +1,7 @@
-import { useEffect, useCallback } from 'react';
+import { useEffect, useCallback, Fragment } from 'react';
 import { StyleSheet, View } from 'react-native';
 import { useRouter } from 'expo-router';
+import Svg, { Circle, Line, Polyline, Text as SvgText } from 'react-native-svg';
 
 import {
   PrimaryButton,
@@ -13,7 +14,10 @@ import { ThemedView } from '#/components/themed-view';
 import { useColorScheme } from '#/hooks/use-color-scheme';
 import { useAppDispatch, useAppSelector } from '#/redux/hooks';
 import { addPoint, selectScoreboardViewModel, undoLastPoint } from '#/redux/matchSlice';
-import type { ScoreboardSetScore, ScoreboardTeam } from '#/redux/matchSlice';
+import type {
+  ScoreboardSetProgression,
+  ScoreboardTeam,
+} from '#/redux/matchSlice';
 import type { TeamId } from '#/types/match';
 
 export default function ScoreboardScreen() {
@@ -28,7 +32,7 @@ export default function ScoreboardScreen() {
     venueName,
     canUndo,
     teams,
-    setScores,
+    setProgressions,
   } = useAppSelector(selectScoreboardViewModel);
   const colorScheme = useColorScheme() ?? 'light';
   const cardBackground = colorScheme === 'light' ? '#ffffff' : '#0f172a';
@@ -108,7 +112,7 @@ export default function ScoreboardScreen() {
         <SetScoresGraph
           colorScheme={colorScheme}
           mutedColor={mutedColor}
-          setScores={setScores}
+          setProgressions={setProgressions}
           teams={teams}
           trackColor={trackColor}
         />
@@ -118,70 +122,248 @@ export default function ScoreboardScreen() {
 }
 
 type SetScoresGraphProps = {
-  setScores: ScoreboardSetScore[];
+  setProgressions: ScoreboardSetProgression[];
   teams: ScoreboardTeam[];
   colorScheme: 'light' | 'dark';
   trackColor: string;
   mutedColor: string;
 };
 
-const BAR_MAX_HEIGHT = 140;
+const CHART_HEIGHT = 184;
+const HORIZONTAL_STEP = 36;
+const PADDING = { top: 20, right: 28, bottom: 44, left: 44 };
 
-function SetScoresGraph({ setScores, teams, colorScheme, trackColor, mutedColor }: SetScoresGraphProps) {
+function SetScoresGraph({
+  setProgressions,
+  teams,
+  colorScheme,
+  trackColor,
+  mutedColor,
+}: SetScoresGraphProps) {
   const teamColors: Record<TeamId, string> =
     colorScheme === 'light'
-      ? { sideA: '#2563eb', sideB: '#f97316' }
-      : { sideA: '#60a5fa', sideB: '#fb923c' };
-
-  const maxScore = Math.max(
-    1,
-    ...setScores.map((set) => Math.max(set.scores.sideA, set.scores.sideB)),
-  );
+      ? { sideA: '#ef4444', sideB: '#0f172a' }
+      : { sideA: '#f87171', sideB: '#e2e8f0' };
 
   return (
-    <View style={styles.graphContainer}>
-      {setScores.map((set) => (
-        <View key={set.gameNumber} style={styles.setColumn}>
-          <ThemedText type="defaultSemiBold" style={styles.setLabel}>
-            Set {set.gameNumber}
-          </ThemedText>
-
-          <View style={styles.barGroup}>
-            {teams.map((team) => {
-              const score = set.scores[team.id];
-              const height = (score / maxScore) * BAR_MAX_HEIGHT;
-              const opacity = set.isComplete || set.isCurrent ? 1 : 0.35;
-
-              return (
-                <View key={team.id} style={styles.barColumn}>
-                  <View style={[styles.barTrack, { backgroundColor: trackColor }]}>
-                    <View
-                      style={[
-                        styles.barFill,
-                        {
-                          height,
-                          backgroundColor: teamColors[team.id],
-                          opacity,
-                        },
-                      ]}
-                    />
-                  </View>
-                  <ThemedText type="defaultSemiBold" style={styles.barScore}>
-                    {score}
-                  </ThemedText>
-                  <ThemedText type="default" style={[styles.barTeamLabel, { color: mutedColor }]}>
-                    {team.label}
-                  </ThemedText>
-                </View>
-              );
-            })}
+    <View style={styles.graphWrapper}>
+      <View style={styles.legendRow}>
+        {teams.map((team) => (
+          <View key={team.id} style={styles.legendItem}>
+            <View style={[styles.legendSwatch, { backgroundColor: teamColors[team.id] }]} />
+            <ThemedText type="default" style={[styles.legendLabel, { color: mutedColor }]}>
+              {team.label}
+            </ThemedText>
           </View>
+        ))}
+      </View>
 
-          <ThemedText type="default" style={[styles.setStatus, { color: mutedColor }]}>
-            {set.isComplete ? 'Completed' : set.isCurrent ? 'In Progress' : 'Pending'}
-          </ThemedText>
-        </View>
-      ))}
+      <View style={styles.setList}>
+        {setProgressions.map((set) => (
+          <View key={set.gameNumber} style={styles.setItem}>
+            <View style={styles.setItemHeader}>
+              <ThemedText type="defaultSemiBold">Game {set.gameNumber}</ThemedText>
+              <ThemedText type="default" style={[styles.setStatus, { color: mutedColor }]}>
+                {set.isComplete ? 'Completed' : set.isCurrent ? 'In Progress' : 'Not Started'}
+              </ThemedText>
+            </View>
+
+            <SetLineChart
+              colorScheme={colorScheme}
+              mutedColor={mutedColor}
+              progression={set}
+              teamColors={teamColors}
+              teams={teams}
+              trackColor={trackColor}
+            />
+          </View>
+        ))}
+      </View>
+    </View>
+  );
+}
+
+type SetLineChartProps = {
+  progression: ScoreboardSetProgression;
+  teams: ScoreboardTeam[];
+  teamColors: Record<TeamId, string>;
+  trackColor: string;
+  mutedColor: string;
+  colorScheme: 'light' | 'dark';
+};
+
+function SetLineChart({
+  progression,
+  teams,
+  teamColors,
+  trackColor,
+  mutedColor,
+  colorScheme,
+}: SetLineChartProps) {
+  const points = progression.points;
+  const maxScore = Math.max(
+    1,
+    ...points.map((point) => Math.max(point.scores.sideA, point.scores.sideB)),
+  );
+  const lastRally = points.length > 0 ? points[points.length - 1].rally : 0;
+  const domainMaxRally = Math.max(1, lastRally);
+
+  const chartWidth = Math.max(1, domainMaxRally) * HORIZONTAL_STEP;
+  const viewBoxWidth = PADDING.left + chartWidth + PADDING.right;
+  const viewBoxHeight = PADDING.top + CHART_HEIGHT + PADDING.bottom;
+  const chartLeft = PADDING.left;
+  const chartRight = viewBoxWidth - PADDING.right;
+  const chartTop = PADDING.top;
+  const chartBottom = chartTop + CHART_HEIGHT;
+
+  const xForRally = (rally: number) =>
+    lastRally === 0
+      ? (chartLeft + chartRight) / 2
+      : chartLeft + (rally / domainMaxRally) * (chartRight - chartLeft);
+  const yForScore = (score: number) =>
+    maxScore === 0 ? chartBottom : chartBottom - (score / maxScore) * CHART_HEIGHT;
+
+  const yTickStep = Math.max(1, Math.ceil(maxScore / 5));
+  const yTicks: number[] = [];
+  for (let value = 0; value <= maxScore; value += yTickStep) {
+    yTicks.push(value);
+  }
+  if (yTicks[yTicks.length - 1] !== maxScore) {
+    yTicks.push(maxScore);
+  }
+
+  const xTickStep = Math.max(1, Math.ceil(lastRally / 5));
+  const xTicks: number[] = [];
+  for (let rally = 0; rally <= lastRally; rally += xTickStep) {
+    xTicks.push(rally);
+  }
+  if (xTicks[xTicks.length - 1] !== lastRally) {
+    xTicks.push(lastRally);
+  }
+
+  const teamSeries = teams.map((team) => ({
+    teamId: team.id,
+    coordinates: points.map((point) => ({
+      rally: point.rally,
+      score: point.scores[team.id],
+      x: xForRally(point.rally),
+      y: yForScore(point.scores[team.id]),
+    })),
+  }));
+
+  return (
+    <View style={styles.svgWrapper}>
+      <Svg width="100%" height={viewBoxHeight} viewBox={`0 0 ${viewBoxWidth} ${viewBoxHeight}`}>
+        <Line x1={chartLeft} y1={chartTop} x2={chartLeft} y2={chartBottom} stroke={trackColor} strokeWidth={1} />
+        <Line x1={chartLeft} y1={chartBottom} x2={chartRight} y2={chartBottom} stroke={trackColor} strokeWidth={1} />
+
+        {yTicks.map((tick) => {
+          const y = yForScore(tick);
+          const isBaseline = tick === 0;
+
+          return (
+            <Fragment key={`y-${tick}`}>
+              <Line
+                x1={chartLeft}
+                y1={y}
+                x2={chartRight}
+                y2={y}
+                stroke={trackColor}
+                strokeWidth={1}
+                opacity={isBaseline ? 1 : 0.28}
+                strokeDasharray={isBaseline ? undefined : '4 6'}
+              />
+              <SvgText
+                x={chartLeft - 10}
+                y={y + 4}
+                fontSize={12}
+                fill={mutedColor}
+                textAnchor="end"
+              >
+                {tick}
+              </SvgText>
+            </Fragment>
+          );
+        })}
+
+        {xTicks.map((tick) => {
+          const x = xForRally(tick);
+          const isOrigin = tick === 0;
+
+          return (
+            <Fragment key={`x-${tick}`}>
+              <Line
+                x1={x}
+                y1={chartTop}
+                x2={x}
+                y2={chartBottom}
+                stroke={trackColor}
+                strokeWidth={1}
+                opacity={isOrigin ? 1 : 0.18}
+                strokeDasharray={isOrigin ? undefined : '4 6'}
+              />
+              <SvgText
+                x={x}
+                y={chartBottom + 22}
+                fontSize={11}
+                fill={mutedColor}
+                textAnchor="middle"
+              >
+                {tick}
+              </SvgText>
+            </Fragment>
+          );
+        })}
+
+        {teamSeries.map((series) => (
+          <Fragment key={`series-${series.teamId}`}>
+            {series.coordinates.length > 1 && (
+              <Polyline
+                points={series.coordinates.map((coordinate) => `${coordinate.x},${coordinate.y}`).join(' ')}
+                fill="none"
+                stroke={teamColors[series.teamId]}
+                strokeWidth={3}
+                strokeLinejoin="round"
+                strokeLinecap="round"
+              />
+            )}
+
+            {series.coordinates
+              .filter((coordinate) => coordinate.rally > 0)
+              .map((coordinate) => (
+                <Circle
+                  key={`point-${series.teamId}-${coordinate.rally}`}
+                  cx={coordinate.x}
+                  cy={coordinate.y}
+                  r={5.5}
+                  stroke={colorScheme === 'light' ? '#ffffff' : '#020617'}
+                  strokeWidth={2}
+                  fill={teamColors[series.teamId]}
+                />
+              ))}
+          </Fragment>
+        ))}
+
+        <SvgText
+          x={chartLeft - 24}
+          y={chartTop - 8}
+          fontSize={11}
+          fill={mutedColor}
+          textAnchor="start"
+        >
+          Points
+        </SvgText>
+
+        <SvgText
+          x={(chartLeft + chartRight) / 2}
+          y={viewBoxHeight - 8}
+          fontSize={11}
+          fill={mutedColor}
+          textAnchor="middle"
+        >
+          Rally Count
+        </SvgText>
+      </Svg>
     </View>
   );
 }
@@ -246,50 +428,42 @@ const styles = StyleSheet.create({
   setsDescription: {
     color: '#64748b',
   },
-  graphContainer: {
-    flexDirection: 'row',
-    justifyContent: 'space-between',
+  graphWrapper: {
     gap: 16,
   },
-  setColumn: {
-    flex: 1,
-    alignItems: 'center',
+  setList: {
+    gap: 24,
+  },
+  setItem: {
     gap: 12,
   },
-  setLabel: {
-    textTransform: 'uppercase',
-    letterSpacing: 0.8,
+  setItemHeader: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    justifyContent: 'space-between',
   },
-  barGroup: {
+  setStatus: {
+    fontSize: 13,
+  },
+  legendRow: {
     flexDirection: 'row',
     gap: 16,
-    alignItems: 'flex-end',
+    flexWrap: 'wrap',
   },
-  barColumn: {
+  legendItem: {
+    flexDirection: 'row',
     alignItems: 'center',
     gap: 8,
   },
-  barTrack: {
-    width: 28,
-    height: BAR_MAX_HEIGHT,
-    borderRadius: 18,
-    overflow: 'hidden',
-    justifyContent: 'flex-end',
+  legendSwatch: {
+    width: 12,
+    height: 12,
+    borderRadius: 6,
   },
-  barFill: {
+  legendLabel: {
+    fontSize: 14,
+  },
+  svgWrapper: {
     width: '100%',
-    borderRadius: 18,
-  },
-  barScore: {
-    fontSize: 16,
-  },
-  barTeamLabel: {
-    fontSize: 12,
-    textAlign: 'center',
-    color: '#64748b',
-  },
-  setStatus: {
-    fontSize: 12,
-    color: '#64748b',
   },
 });
