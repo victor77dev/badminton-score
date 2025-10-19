@@ -103,17 +103,28 @@ export default function SetupScreen() {
     const aspectRatio = 13 / 6;
     const availableWidth = Math.max(screenWidth - horizontalPadding, 320);
     const maxCourtHeight = Math.max(screenHeight * 0.7, 320);
+    const isCompactWidth = availableWidth < 520;
+    const minCourtHeight = matchType === 'doubles' ? 360 : 320;
 
     let computedWidth = availableWidth;
-    let computedHeight = computedWidth / aspectRatio;
+    const naturalHeight = computedWidth / aspectRatio;
+    let computedHeight = naturalHeight;
+
+    if (isCompactWidth && computedHeight < minCourtHeight) {
+      computedHeight = minCourtHeight;
+    }
 
     if (computedHeight > maxCourtHeight) {
       computedHeight = maxCourtHeight;
-      computedWidth = computedHeight * aspectRatio;
+    }
+
+    if (computedHeight !== naturalHeight) {
+      const ratioWidth = computedHeight * aspectRatio;
+      computedWidth = ratioWidth <= availableWidth ? ratioWidth : availableWidth;
     }
 
     return { width: computedWidth, height: computedHeight };
-  }, [screenHeight, screenWidth]);
+  }, [matchType, screenHeight, screenWidth]);
 
   return (
     <ThemedView style={styles.container} lightColor={courtBackground} darkColor={courtBackground}>
