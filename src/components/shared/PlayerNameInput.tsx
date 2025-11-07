@@ -1,3 +1,4 @@
+import { forwardRef } from 'react';
 import {
   StyleSheet,
   Text,
@@ -19,15 +20,18 @@ export type PlayerNameInputProps = TextInputProps & {
   errorTextStyle?: StyleProp<TextStyle>;
 };
 
-export function PlayerNameInput({
-  label,
-  errorMessage,
-  style,
-  containerStyle,
-  labelStyle,
-  errorTextStyle,
-  ...textInputProps
-}: PlayerNameInputProps) {
+export const PlayerNameInput = forwardRef<TextInput, PlayerNameInputProps>(function PlayerNameInput(
+  {
+    label,
+    errorMessage,
+    style,
+    containerStyle,
+    labelStyle,
+    errorTextStyle,
+    ...textInputProps
+  }: PlayerNameInputProps,
+  ref,
+) {
   const colorScheme = useColorScheme() ?? 'light';
   const labelColor = colorScheme === 'light' ? '#1f2937' : '#e5e7eb';
   const inputTextColor = colorScheme === 'light' ? '#0f172a' : '#f8fafc';
@@ -41,6 +45,7 @@ export function PlayerNameInput({
     <View style={[styles.container, containerStyle]}>
       <Text style={[styles.label, { color: labelColor }, labelStyle]}>{label}</Text>
       <TextInput
+        ref={ref}
         placeholderTextColor={placeholderColor}
         style={[
           styles.input,
@@ -54,7 +59,7 @@ export function PlayerNameInput({
       )}
     </View>
   );
-}
+});
 
 const styles = StyleSheet.create({
   container: {

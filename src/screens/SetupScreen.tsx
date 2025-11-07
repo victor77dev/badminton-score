@@ -1,4 +1,4 @@
-import { useCallback, useEffect, useMemo, useState } from 'react';
+import { useCallback, useEffect, useMemo, useRef, useState } from 'react';
 import { useRouter } from 'expo-router';
 import {
   KeyboardAvoidingView,
@@ -9,8 +9,10 @@ import {
   Text,
   View,
   useWindowDimensions,
+  type StyleProp,
+  type TextInput,
+  type ViewStyle,
 } from 'react-native';
-import type { StyleProp, ViewStyle } from 'react-native';
 
 import { PlayerNameInput, PrimaryButton } from '#/components/shared';
 import { ThemedText } from '#/components/themed-text';
@@ -35,6 +37,10 @@ export default function SetupScreen() {
   const [showValidation, setShowValidation] = useState(false);
   const colorScheme = useColorScheme() ?? 'light';
   const { width: screenWidth, height: screenHeight } = useWindowDimensions();
+  const sideAPlayer1Ref = useRef<TextInput | null>(null);
+  const sideAPlayer2Ref = useRef<TextInput | null>(null);
+  const sideBPlayer1Ref = useRef<TextInput | null>(null);
+  const sideBPlayer2Ref = useRef<TextInput | null>(null);
 
   const courtBackground = colorScheme === 'light' ? '#0a8f3d' : '#064e3b';
   const courtLineColor = '#f8fafc';
@@ -171,7 +177,7 @@ export default function SetupScreen() {
                 style={[
                   styles.playerZone,
                   matchType === 'doubles'
-                    ? styles.playerZoneTopLeft
+                    ? styles.playerZoneTopDoubles
                     : styles.playerZoneTopCenter,
                   {
                     backgroundColor: sideContainerOverlay,
@@ -180,42 +186,59 @@ export default function SetupScreen() {
                 ]}
               >
                 <ThemedText style={[styles.sideLabel, { color: sideLabelColor }]}>Side A</ThemedText>
-                <PlayerNameInput
-                  label={matchType === 'doubles' ? 'Player 1' : 'Player'}
-                  value={playerNames.sideA[0]}
-                  onChangeText={(text) => handleNameChange('sideA', 0, text)}
-                  returnKeyType="next"
-                  autoCapitalize="words"
-                  errorMessage={
-                    showValidation && playerNames.sideA[0].trim().length === 0 ? nameError : undefined
-                  }
-                  labelStyle={[styles.inputLabel, { color: inputLabelColor }]}
-                  style={[
-                    styles.inputOnCourt,
-                    { backgroundColor: inputBackground, color: inputTextColor },
-                  ]}
-                />
-              </View>
-
-              {matchType === 'doubles' && (
-                <View
-                  style={[
-                    styles.playerZone,
-                    styles.playerZoneTopRight,
-                    {
-                      backgroundColor: sideContainerOverlay,
-                      borderColor: sideBorderColor,
-                    },
-                  ]}
-                >
+                {matchType === 'doubles' ? (
+                  <View style={styles.doublesInputRow}>
+                    <PlayerNameInput
+                      ref={sideAPlayer1Ref}
+                      label="Player 1"
+                      value={playerNames.sideA[0]}
+                      onChangeText={(text) => handleNameChange('sideA', 0, text)}
+                      returnKeyType="next"
+                      autoCapitalize="words"
+                      blurOnSubmit={false}
+                      onSubmitEditing={() => sideAPlayer2Ref.current?.focus()}
+                      errorMessage={
+                        showValidation && playerNames.sideA[0].trim().length === 0 ? nameError : undefined
+                      }
+                      labelStyle={[styles.inputLabel, { color: inputLabelColor }]}
+                      style={[
+                        styles.inputOnCourt,
+                        { backgroundColor: inputBackground, color: inputTextColor },
+                      ]}
+                      containerStyle={[styles.doublesInput, styles.doublesInputSpacing]}
+                    />
+                    <PlayerNameInput
+                      ref={sideAPlayer2Ref}
+                      label="Player 2"
+                      value={playerNames.sideA[1]}
+                      onChangeText={(text) => handleNameChange('sideA', 1, text)}
+                      returnKeyType="next"
+                      autoCapitalize="words"
+                      blurOnSubmit={false}
+                      onSubmitEditing={() => sideBPlayer1Ref.current?.focus()}
+                      errorMessage={
+                        showValidation && playerNames.sideA[1].trim().length === 0 ? nameError : undefined
+                      }
+                      labelStyle={[styles.inputLabel, { color: inputLabelColor }]}
+                      style={[
+                        styles.inputOnCourt,
+                        { backgroundColor: inputBackground, color: inputTextColor },
+                      ]}
+                      containerStyle={styles.doublesInput}
+                    />
+                  </View>
+                ) : (
                   <PlayerNameInput
-                    label="Player 2"
-                    value={playerNames.sideA[1]}
-                    onChangeText={(text) => handleNameChange('sideA', 1, text)}
+                    ref={sideAPlayer1Ref}
+                    label="Player"
+                    value={playerNames.sideA[0]}
+                    onChangeText={(text) => handleNameChange('sideA', 0, text)}
                     returnKeyType="next"
                     autoCapitalize="words"
+                    blurOnSubmit={false}
+                    onSubmitEditing={() => sideBPlayer1Ref.current?.focus()}
                     errorMessage={
-                      showValidation && playerNames.sideA[1].trim().length === 0 ? nameError : undefined
+                      showValidation && playerNames.sideA[0].trim().length === 0 ? nameError : undefined
                     }
                     labelStyle={[styles.inputLabel, { color: inputLabelColor }]}
                     style={[
@@ -223,14 +246,14 @@ export default function SetupScreen() {
                       { backgroundColor: inputBackground, color: inputTextColor },
                     ]}
                   />
-                </View>
-              )}
+                )}
+              </View>
 
               <View
                 style={[
                   styles.playerZone,
                   matchType === 'doubles'
-                    ? styles.playerZoneBottomLeft
+                    ? styles.playerZoneBottomDoubles
                     : styles.playerZoneBottomCenter,
                   {
                     backgroundColor: sideContainerOverlay,
@@ -239,42 +262,57 @@ export default function SetupScreen() {
                 ]}
               >
                 <ThemedText style={[styles.sideLabel, { color: sideLabelColor }]}>Side B</ThemedText>
-                <PlayerNameInput
-                  label={matchType === 'doubles' ? 'Player 1' : 'Player'}
-                  value={playerNames.sideB[0]}
-                  onChangeText={(text) => handleNameChange('sideB', 0, text)}
-                  returnKeyType={matchType === 'doubles' ? 'next' : 'done'}
-                  autoCapitalize="words"
-                  errorMessage={
-                    showValidation && playerNames.sideB[0].trim().length === 0 ? nameError : undefined
-                  }
-                  labelStyle={[styles.inputLabel, { color: inputLabelColor }]}
-                  style={[
-                    styles.inputOnCourt,
-                    { backgroundColor: inputBackground, color: inputTextColor },
-                  ]}
-                />
-              </View>
-
-              {matchType === 'doubles' && (
-                <View
-                  style={[
-                    styles.playerZone,
-                    styles.playerZoneBottomRight,
-                    {
-                      backgroundColor: sideContainerOverlay,
-                      borderColor: sideBorderColor,
-                    },
-                  ]}
-                >
+                {matchType === 'doubles' ? (
+                  <View style={styles.doublesInputRow}>
+                    <PlayerNameInput
+                      ref={sideBPlayer1Ref}
+                      label="Player 1"
+                      value={playerNames.sideB[0]}
+                      onChangeText={(text) => handleNameChange('sideB', 0, text)}
+                      returnKeyType="next"
+                      autoCapitalize="words"
+                      blurOnSubmit={false}
+                      onSubmitEditing={() => sideBPlayer2Ref.current?.focus()}
+                      errorMessage={
+                        showValidation && playerNames.sideB[0].trim().length === 0 ? nameError : undefined
+                      }
+                      labelStyle={[styles.inputLabel, { color: inputLabelColor }]}
+                      style={[
+                        styles.inputOnCourt,
+                        { backgroundColor: inputBackground, color: inputTextColor },
+                      ]}
+                      containerStyle={[styles.doublesInput, styles.doublesInputSpacing]}
+                    />
+                    <PlayerNameInput
+                      ref={sideBPlayer2Ref}
+                      label="Player 2"
+                      value={playerNames.sideB[1]}
+                      onChangeText={(text) => handleNameChange('sideB', 1, text)}
+                      returnKeyType="done"
+                      autoCapitalize="words"
+                      onSubmitEditing={handleStartMatch}
+                      errorMessage={
+                        showValidation && playerNames.sideB[1].trim().length === 0 ? nameError : undefined
+                      }
+                      labelStyle={[styles.inputLabel, { color: inputLabelColor }]}
+                      style={[
+                        styles.inputOnCourt,
+                        { backgroundColor: inputBackground, color: inputTextColor },
+                      ]}
+                      containerStyle={styles.doublesInput}
+                    />
+                  </View>
+                ) : (
                   <PlayerNameInput
-                    label="Player 2"
-                    value={playerNames.sideB[1]}
-                    onChangeText={(text) => handleNameChange('sideB', 1, text)}
+                    ref={sideBPlayer1Ref}
+                    label="Player"
+                    value={playerNames.sideB[0]}
+                    onChangeText={(text) => handleNameChange('sideB', 0, text)}
                     returnKeyType="done"
                     autoCapitalize="words"
+                    onSubmitEditing={handleStartMatch}
                     errorMessage={
-                      showValidation && playerNames.sideB[1].trim().length === 0 ? nameError : undefined
+                      showValidation && playerNames.sideB[0].trim().length === 0 ? nameError : undefined
                     }
                     labelStyle={[styles.inputLabel, { color: inputLabelColor }]}
                     style={[
@@ -282,8 +320,8 @@ export default function SetupScreen() {
                       { backgroundColor: inputBackground, color: inputTextColor },
                     ]}
                   />
-                </View>
-              )}
+                )}
+              </View>
 
               <View pointerEvents="none" style={styles.courtLineLayer}>
                 <View style={[styles.courtOutline, { borderColor: courtLineColor }]} />
@@ -462,25 +500,15 @@ const styles = StyleSheet.create({
     justifyContent: 'center',
     zIndex: 1,
   },
-  playerZoneTopLeft: {
+  playerZoneTopDoubles: {
     top: '10%',
     left: '8%',
-    width: '38%',
-  },
-  playerZoneTopRight: {
-    top: '10%',
     right: '8%',
-    width: '38%',
   },
-  playerZoneBottomLeft: {
+  playerZoneBottomDoubles: {
     bottom: '10%',
     left: '8%',
-    width: '38%',
-  },
-  playerZoneBottomRight: {
-    bottom: '10%',
     right: '8%',
-    width: '38%',
   },
   playerZoneTopCenter: {
     top: '12%',
@@ -491,6 +519,15 @@ const styles = StyleSheet.create({
     bottom: '12%',
     left: '14%',
     right: '14%',
+  },
+  doublesInputRow: {
+    flexDirection: 'row',
+  },
+  doublesInput: {
+    flex: 1,
+  },
+  doublesInputSpacing: {
+    marginRight: 12,
   },
   sideLabel: {
     fontSize: 18,
