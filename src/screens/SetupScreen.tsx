@@ -42,7 +42,7 @@ export default function SetupScreen() {
   const sideBPlayer1Ref = useRef<TextInput | null>(null);
   const sideBPlayer2Ref = useRef<TextInput | null>(null);
 
-  const courtBackground = colorScheme === 'light' ? '#0a8f3d' : '#064e3b';
+  const courtBackground = colorScheme === 'light' ? '#0b5ed7' : '#0a3a7a';
   const courtLineColor = '#f8fafc';
   const sideContainerOverlay = colorScheme === 'light' ? 'rgba(255,255,255,0.14)' : 'rgba(15,23,42,0.4)';
   const sideBorderColor = colorScheme === 'light' ? 'rgba(255,255,255,0.4)' : 'rgba(226,232,240,0.5)';
