@@ -230,11 +230,11 @@ function SetLineChart({
       : [{ rally: 0, scores: { sideA: 0, sideB: 0 } }];
 
   const maxScore = Math.max(
-    1,
+    21,
     ...points.map((point) => Math.max(point.scores.sideA, point.scores.sideB)),
   );
   const lastRally = points[points.length - 1]?.rally ?? 0;
-  const domainMaxRally = Math.max(1, lastRally);
+  const domainMaxRally = Math.max(21, lastRally);
 
   const chartWidth = domainMaxRally * HORIZONTAL_STEP;
   const viewBoxWidth = PADDING.left + chartWidth + PADDING.right;
@@ -245,9 +245,7 @@ function SetLineChart({
   const chartBottom = chartTop + CHART_HEIGHT;
 
   const xForRally = (rally: number) =>
-    lastRally === 0
-      ? (chartLeft + chartRight) / 2
-      : chartLeft + (rally / domainMaxRally) * (chartRight - chartLeft);
+    chartLeft + (rally / domainMaxRally) * (chartRight - chartLeft);
   const yForScore = (score: number) =>
     maxScore === 0 ? chartBottom : chartBottom - (score / maxScore) * CHART_HEIGHT;
 
@@ -260,13 +258,13 @@ function SetLineChart({
     yTicks.push(maxScore);
   }
 
-  const xTickStep = Math.max(1, Math.ceil(lastRally / 5));
+  const xTickStep = Math.max(1, Math.ceil(domainMaxRally / 5));
   const xTicks: number[] = [];
-  for (let rally = 0; rally <= lastRally; rally += xTickStep) {
+  for (let rally = 0; rally <= domainMaxRally; rally += xTickStep) {
     xTicks.push(rally);
   }
-  if (xTicks[xTicks.length - 1] !== lastRally) {
-    xTicks.push(lastRally);
+  if (xTicks[xTicks.length - 1] !== domainMaxRally) {
+    xTicks.push(domainMaxRally);
   }
 
   const teamSeries = teams.map((team) => ({
