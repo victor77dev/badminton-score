@@ -73,7 +73,7 @@ const initialState: MatchState = {
   matchTitle: 'Friendly Match',
   matchType: 'singles',
   currentGame: 1,
-  totalGames: 3,
+  totalGames: 2,
   servingTeam: 'sideA',
   gamesWon: {
     sideA: 0,
@@ -113,7 +113,7 @@ export function MatchProvider({ children }: { children: ReactNode }) {
       matchTitle: 'Friendly Match',
       matchType,
       currentGame: 1,
-      totalGames: 3,
+      totalGames: 2,
       servingTeam: 'sideA',
       gamesWon: {
         sideA: 0,
@@ -201,6 +201,7 @@ export function MatchProvider({ children }: { children: ReactNode }) {
       let gamesWon = { ...current.gamesWon };
       let servingTeam: TeamId = teamId;
       let status: MatchState['status'] = current.status;
+      let totalGames = current.totalGames;
       let completedGames = current.completedGames;
       let teams: Record<TeamId, TeamState> = {
         sideA: {
@@ -231,7 +232,10 @@ export function MatchProvider({ children }: { children: ReactNode }) {
           },
         ];
 
-        const gamesNeededToWin = Math.floor(current.totalGames / 2) + 1;
+        if (totalGames === 2 && gamesWon.sideA === 1 && gamesWon.sideB === 1) {
+          totalGames = 3;
+        }
+        const gamesNeededToWin = Math.floor(totalGames / 2) + 1;
         const matchWon = gamesWon[teamId] >= gamesNeededToWin;
 
         if (matchWon) {
@@ -261,6 +265,7 @@ export function MatchProvider({ children }: { children: ReactNode }) {
         currentGame,
         gamesWon,
         status,
+        totalGames,
         courtOrder: nextCourtOrder,
         hasSwitchedMidGame,
         history: [...current.history, snapshot],

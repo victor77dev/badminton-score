@@ -99,7 +99,7 @@ const initialState: MatchState = {
   matchTitle: 'Friendly Match',
   matchType: 'singles',
   currentGame: 1,
-  totalGames: 3,
+  totalGames: 2,
   servingTeam: 'sideA',
   gamesWon: {
     sideA: 0,
@@ -138,7 +138,7 @@ const matchSlice = createSlice({
       state.status = 'in-progress';
       state.matchType = matchType;
       state.currentGame = 1;
-      state.totalGames = 3;
+      state.totalGames = 2;
       state.gamesWon = {
         sideA: 0,
         sideB: 0,
@@ -231,6 +231,10 @@ const matchSlice = createSlice({
           },
           winner: teamId,
         });
+
+        if (state.totalGames === 2 && state.gamesWon.sideA === 1 && state.gamesWon.sideB === 1) {
+          state.totalGames = 3;
+        }
 
         const gamesNeededToWin = Math.floor(state.totalGames / 2) + 1;
         const matchWon = state.gamesWon[teamId] >= gamesNeededToWin;
