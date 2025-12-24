@@ -24,9 +24,9 @@ import type {
 } from '#/redux/matchSlice';
 import type { TeamId } from '#/types/match';
 
-const CHART_HEIGHT = 184;
-const HORIZONTAL_STEP = 36;
-const PADDING = { top: 20, right: 28, bottom: 44, left: 44 };
+const CHART_HEIGHT = 240;
+const HORIZONTAL_STEP = 44;
+const PADDING = { top: 28, right: 28, bottom: 52, left: 44 };
 
 export default function ScoreboardScreen() {
   const navigationState = useRootNavigationState();
@@ -249,23 +249,8 @@ function SetLineChart({
   const yForScore = (score: number) =>
     maxScore === 0 ? chartBottom : chartBottom - (score / maxScore) * CHART_HEIGHT;
 
-  const yTickStep = Math.max(1, Math.ceil(maxScore / 5));
-  const yTicks: number[] = [];
-  for (let value = 0; value <= maxScore; value += yTickStep) {
-    yTicks.push(value);
-  }
-  if (yTicks[yTicks.length - 1] !== maxScore) {
-    yTicks.push(maxScore);
-  }
-
-  const xTickStep = Math.max(1, Math.ceil(domainMaxRally / 5));
-  const xTicks: number[] = [];
-  for (let rally = 0; rally <= domainMaxRally; rally += xTickStep) {
-    xTicks.push(rally);
-  }
-  if (xTicks[xTicks.length - 1] !== domainMaxRally) {
-    xTicks.push(domainMaxRally);
-  }
+  const yTicks = Array.from({ length: maxScore + 1 }, (_, value) => value);
+  const xTicks = Array.from({ length: domainMaxRally + 1 }, (_, rally) => rally);
 
   const teamSeries = teams.map((team) => ({
     teamId: team.id,
@@ -276,6 +261,15 @@ function SetLineChart({
       y: yForScore(point.scores[team.id]),
     })),
   }));
+
+  const breakPoint = points.find(
+    (point) =>
+      (point.scores.sideA === 11 && point.scores.sideB < 11) ||
+      (point.scores.sideB === 11 && point.scores.sideA < 11),
+  );
+  const breakLabels = breakPoint
+    ? ['Break', ...(progression.gameNumber === 3 ? ['Switch Court'] : [])]
+    : [];
 
   return (
     <View style={styles.svgWrapper}>
@@ -340,6 +334,32 @@ function SetLineChart({
             </Fragment>
           );
         })}
+
+        {breakPoint && (
+          <Fragment>
+            <Line
+              x1={xForRally(breakPoint.rally)}
+              y1={chartTop}
+              x2={xForRally(breakPoint.rally)}
+              y2={chartBottom}
+              stroke={mutedColor}
+              strokeWidth={1.5}
+              strokeDasharray="6 6"
+            />
+            {breakLabels.map((label, index) => (
+              <SvgText
+                key={`break-${label}`}
+                x={xForRally(breakPoint.rally)}
+                y={chartTop - 10 - index * 12}
+                fontSize={11}
+                fill={mutedColor}
+                textAnchor="middle"
+              >
+                {label}
+              </SvgText>
+            ))}
+          </Fragment>
+        )}
 
         {teamSeries.map((series) => (
           <Fragment key={`series-${series.teamId}`}>
